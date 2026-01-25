@@ -1,1 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LITERANOVA</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Background effect canvas (optional placeholder) -->
+  <canvas id="bg"></canvas>
+
+  <!-- Top-left brand + inbox -->
+  <div class="top-left">
+    <div class="brand">LITERANOVA</div>
+
+    <div class="inbox">
+      <button id="inboxBtn" class="icon-btn" aria-label="Inbox">
+        ✉
+      </button>
+      <div id="inboxMenu" class="dropdown hidden">
+        <div class="dropdown-title">INBOX</div>
+        <div id="inboxItems" class="dropdown-items"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right-side address book -->
+  <div class="right-rail">
+    <div class="rail-title">ADDRESSES</div>
+    <div id="addressList" class="address-list"></div>
+  </div>
+
+  <!-- Center content -->
+  <main class="center">
+    <div id="centerText" class="center-text">
+      SELECT AN ADDRESS TO SEND A MESSAGE<br/>
+      OR OPEN THE INBOX.
+    </div>
+
+    <!-- Compose / reply area (changes depending on mode) -->
+    <div id="composer" class="composer">
+      <div class="composer-row">
+        <span id="composerLabel" class="label">SEND</span>
+        <div class="line-wrap">
+          <input id="composerInput" class="line-input" autocomplete="off" spellcheck="false" />
+          <div class="line"></div>
+        </div>
+        <button id="sendBtn" class="send-btn">SEND</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
 
