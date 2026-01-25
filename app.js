@@ -45,6 +45,13 @@ const composerInput = document.getElementById("composerInput");
 const sendBtn = document.getElementById("sendBtn");
 const connectBtn = document.getElementById("connectBtn");
 const walletStatus = document.getElementById("walletStatus");
+// --- Debug checks ---
+if(!connectBtn){
+  centerText.textContent = "ERROR: CONNECT BUTTON NOT FOUND (connectBtn is null).";
+}
+if(!walletStatus){
+  centerText.textContent = "ERROR: WALLET STATUS ELEMENT NOT FOUND (walletStatus is null).";
+}
 
 
 // ---- Render functions ----
