@@ -10,6 +10,7 @@ const ADDRESSES = [
 const state = {
   mode: "compose", // compose | thread
   activeTo: null,
+  activeToResolved: null,   // ✅ add this
   activeThreadId: null,
   inboxOpen: false
 };
@@ -90,12 +91,30 @@ function renderInbox(){
   });
 }
 
-function openComposer(toAddress){
-  state.mode = "compose";
-  state.activeTo = toAddress;
-  state.activeThreadId = null;
+async function openComposer(toAddress){
+state.mode = "compose";
+state.activeTo = toAddress;
+state.activeToResolved = null;
+state.activeThreadId = null;
 
-  centerText.textContent = `NEW MESSAGE TO: ${toAddress.toUpperCase()}\n\nTYPE YOUR MESSAGE BELOW.`;
+// Try to resolve ENS / Basename to an address (only works after wallet connect)
+let resolved = null;
+
+if(window.ethereum && toAddress.includes(".")){
+  try{
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    resolved = await provider.resolveName(toAddress);
+  } catch (e){
+    resolved = null;
+  }
+}
+
+state.activeToResolved = resolved;
+
+centerText.textContent =
+  `NEW MESSAGE TO: ${toAddress.toUpperCase()}\n` +
+  (resolved ? `RESOLVED: ${resolved}\n\n` : `RESOLVED: (NOT FOUND)\n\n`) +
+  `TYPE YOUR MESSAGE BELOW.`;
   composerLabel.textContent = "SEND";
   composerInput.value = "";
   composerInput.placeholder = "";
@@ -150,11 +169,11 @@ function send(){
     const threads = load(LS_THREADS, {});
     threads[threadId] = {
       threadId,
-      participants: [myAddress, state.activeTo],
+      participants: [myAddress, state.activeToResolved || state.activeTo],
       messages: [{
         id: uid(),
         from: myAddress,
-        to: state.activeTo,
+        to: state.activeToResolved || state.activeTo,
         body,
         ts: Date.now()
       }]
