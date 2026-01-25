@@ -92,35 +92,44 @@ function renderInbox(){
 }
 
 async function openComposer(toAddress){
-state.mode = "compose";
-state.activeTo = toAddress;
-state.activeToResolved = null;
-state.activeThreadId = null;
+  state.mode = "compose";
+  state.activeTo = toAddress;
+  state.activeToResolved = null;
+  state.activeThreadId = null;
 
-// Try to resolve ENS / Basename to an address (only works after wallet connect)
-let resolved = null;
+  // Show immediately so you see something happen
+  centerText.textContent =
+    `NEW MESSAGE TO: ${toAddress.toUpperCase()}\n` +
+    `RESOLVED: (RESOLVING...)\n\n` +
+    `TYPE YOUR MESSAGE BELOW.`;
 
-if(window.ethereum && toAddress.includes(".")){
-  try{
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    resolved = await provider.resolveName(toAddress);
-  } catch (e){
-    resolved = null;
+  let resolved = null;
+
+  // Only attempt resolution if wallet is available
+  if(window.ethereum && toAddress.includes(".")){
+    try{
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      resolved = await provider.resolveName(toAddress);
+    } catch(e){
+      resolved = null;
+    }
   }
-}
 
-state.activeToResolved = resolved;
+  state.activeToResolved = resolved;
 
-centerText.textContent =
-  `NEW MESSAGE TO: ${toAddress.toUpperCase()}\n` +
-  (resolved ? `RESOLVED: ${resolved}\n\n` : `RESOLVED: (NOT FOUND)\n\n`) +
-  `TYPE YOUR MESSAGE BELOW.`;
+  // Update after resolution attempt
+  centerText.textContent =
+    `NEW MESSAGE TO: ${toAddress.toUpperCase()}\n` +
+    (resolved ? `RESOLVED: ${resolved}\n\n` : `RESOLVED: (NOT FOUND)\n\n`) +
+    `TYPE YOUR MESSAGE BELOW.`;
+
   composerLabel.textContent = "SEND";
   composerInput.value = "";
   composerInput.placeholder = "";
   sendBtn.textContent = "SEND";
   composerInput.focus();
 }
+
 
 function openThread(threadId){
   // remove from inbox on open
