@@ -38,9 +38,19 @@
 
   <!-- Right-side address book -->
   <div class="right-rail">
-    <div class="rail-title">ADDRESSES</div>
-    <div id="addressList" class="address-list"></div>
+  <div class="rail-title">ADDRESSES</div>
+
+  <div class="to-box">
+    <div class="to-label">TO:</div>
+    <input id="toInput" class="to-input" placeholder="0x... or name.eth" autocomplete="off" spellcheck="false" />
+    <button id="toGoBtn" class="to-btn">GO</button>
   </div>
+
+  <div class="rail-divider"></div>
+
+  <div id="addressList" class="address-list"></div>
+</div>
+
 
   <!-- Center content -->
   <main class="center">
