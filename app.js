@@ -146,15 +146,14 @@ async function openComposer(toAddress){
 
   let resolved = null;
 
-  // Only attempt resolution if wallet is available
-  if(window.ethereum && toAddress.includes(".")){
-    try{
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      resolved = await provider.resolveName(toAddress);
-    } catch(e){
-      resolved = null;
-    }
+  // Resolve ENS using Ethereum mainnet provider (works even if wallet is on Base)
+if(toAddress.includes(".")){
+  try{
+    resolved = await ensProvider.resolveName(toAddress);
+  } catch(e){
+    resolved = null;
   }
+}
 
   state.activeToResolved = resolved;
 
