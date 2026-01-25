@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LITERANOVA</title>
@@ -14,15 +18,22 @@
   <div class="top-left">
     <div class="brand">LITERANOVA</div>
 
-    <div class="inbox">
-      <button id="inboxBtn" class="icon-btn" aria-label="Inbox">
-        ✉
-      </button>
-      <div id="inboxMenu" class="dropdown hidden">
-        <div class="dropdown-title">INBOX</div>
-        <div id="inboxItems" class="dropdown-items"></div>
-      </div>
-    </div>
+<div class="inbox">
+  <button id="inboxBtn" class="icon-btn" aria-label="Inbox">
+    ✉
+  </button>
+
+  <div class="wallet">
+    <button id="connectBtn" class="icon-btn">CONNECT WALLET</button>
+    <div id="walletStatus" class="wallet-status">NOT CONNECTED</div>
+  </div>
+
+  <div id="inboxMenu" class="dropdown hidden">
+    <div class="dropdown-title">INBOX</div>
+    <div id="inboxItems" class="dropdown-items"></div>
+  </div>
+</div>
+
   </div>
 
   <!-- Right-side address book -->
@@ -51,7 +62,9 @@
     </div>
   </main>
 
-  <script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script src="app.js"></script>
+
 </body>
 </html>
 
