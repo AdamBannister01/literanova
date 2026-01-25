@@ -1,1 +1,225 @@
+/* ----- Base ----- */
+:root{
+  --bg: #020402;
+  --green: #39ff14;
+  --green2: rgba(57,255,20,0.35);
+  --muted: rgba(57,255,20,0.7);
+}
+
+*{ box-sizing:border-box; }
+html, body{
+  height:100%;
+  margin:0;
+  background: var(--bg);
+  color: var(--green);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  overflow:hidden;
+}
+
+#bg{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:0;
+  opacity:0.12; /* keep subtle for now */
+}
+
+/* ----- Top-left ----- */
+.top-left{
+  position:fixed;
+  top:18px;
+  left:18px;
+  z-index:5;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.brand{
+  font-weight:800;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  text-shadow: 0 0 10px var(--green2);
+}
+.inbox{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.icon-btn{
+  background:transparent;
+  border:1px solid var(--green2);
+  color:var(--green);
+  padding:8px 10px;
+  cursor:pointer;
+  border-radius:6px;
+  text-shadow: 0 0 10px var(--green2);
+}
+.icon-btn:hover{
+  border-color: var(--green);
+}
+
+/* Dropdown */
+.dropdown{
+  position:absolute;
+  top:42px;
+  left:0;
+  width:260px;
+  border:1px solid var(--green2);
+  background: rgba(0,0,0,0.85);
+  border-radius:10px;
+  padding:10px;
+  box-shadow: 0 0 18px rgba(57,255,20,0.15);
+}
+.hidden{ display:none; }
+.dropdown-title{
+  font-weight:700;
+  letter-spacing:0.08em;
+  margin-bottom:8px;
+  color:var(--muted);
+}
+.dropdown-items{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.inbox-item{
+  padding:8px;
+  border:1px solid rgba(57,255,20,0.18);
+  border-radius:8px;
+  cursor:pointer;
+}
+.inbox-item:hover{
+  border-color: var(--green);
+}
+.inbox-item .from{
+  color: var(--muted);
+  font-size:12px;
+  margin-bottom:2px;
+}
+.inbox-item .title{
+  font-size:13px;
+}
+
+/* ----- Right rail ----- */
+.right-rail{
+  position:fixed;
+  top:18px;
+  right:18px;
+  z-index:5;
+  width:220px;
+  border:1px solid rgba(57,255,20,0.12);
+  background: rgba(0,0,0,0.35);
+  border-radius:12px;
+  padding:12px;
+}
+.rail-title{
+  color: var(--muted);
+  font-weight:700;
+  letter-spacing:0.08em;
+  margin-bottom:10px;
+}
+.address-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.address{
+  border:1px solid rgba(57,255,20,0.18);
+  padding:8px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:13px;
+}
+.address:hover{
+  border-color: var(--green);
+}
+
+/* ----- Center ----- */
+.center{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  text-align:center;
+  gap:26px;
+}
+.center-text{
+  max-width: 780px;
+  line-height:1.6;
+  text-shadow: 0 0 10px var(--green2);
+  font-size:18px;
+  white-space:pre-wrap;
+}
+
+/* ----- Composer line ----- */
+.composer{
+  width:100%;
+  display:flex;
+  justify-content:center;
+}
+.composer-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  max-width:900px;
+}
+.label{
+  width:70px;
+  text-align:left;
+  color: var(--muted);
+  letter-spacing:0.08em;
+}
+.line-wrap{
+  flex:1;
+  position:relative;
+  /* line starts 1/4 from left and ends 1/4 from right:
+     we implement by padding on the container */
+  padding-left: 25%;
+  padding-right: 25%;
+}
+.line{
+  position:absolute;
+  left:25%;
+  right:25%;
+  bottom:4px;
+  height:1px;
+  background: rgba(57,255,20,0.55);
+  box-shadow: 0 0 12px rgba(57,255,20,0.15);
+}
+.line-input{
+  width:100%;
+  background:transparent;
+  border:none;
+  outline:none;
+  color: var(--green);
+  font-size:16px;
+  padding:10px 0 6px 0;
+  text-shadow: 0 0 10px var(--green2);
+}
+.send-btn{
+  background:transparent;
+  border:1px solid var(--green2);
+  color:var(--green);
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  letter-spacing:0.08em;
+}
+.send-btn:hover{
+  border-color: var(--green);
+}
+
+/* Small screens */
+@media (max-width: 900px){
+  .right-rail{ display:none; }
+  .line-wrap{ padding-left: 10%; padding-right: 10%; }
+  .line{ left:10%; right:10%; }
+}
 
