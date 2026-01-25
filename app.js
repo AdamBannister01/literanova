@@ -21,6 +21,11 @@ let myAddress = null; // becomes 0x... after connect
 const LS_THREADS = "literanova_threads_v0";
 const LS_INBOX = "literanova_inbox_v0";
 
+// ENS resolution should use Ethereum mainnet (works even if wallet is on Base)
+const ENS_MAINNET_RPC = "https://cloudflare-eth.com";
+const ensProvider = new ethers.JsonRpcProvider(ENS_MAINNET_RPC);
+
+
 // Basic store helpers
 function load(key, fallback){
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -47,6 +52,7 @@ const composerInput = document.getElementById("composerInput");
 const sendBtn = document.getElementById("sendBtn");
 const connectBtn = document.getElementById("connectBtn");
 const walletStatus = document.getElementById("walletStatus");
+
 // --- Debug checks ---
 if(!connectBtn){
   centerText.textContent = "ERROR: CONNECT BUTTON NOT FOUND (connectBtn is null).";
@@ -77,17 +83,16 @@ async function normalizeRecipient(input){
 
   // Otherwise treat like ENS name and attempt resolution if possible
   if(raw.includes(".")){
-    if(!hasProvider) return { ok:false, reason:"NO_PROVIDER_FOR_ENS" };
-
-    try{
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const resolved = await provider.resolveName(raw);
-      if(!resolved) return { ok:false, reason:"ENS_NOT_FOUND" };
-      return { ok:true, display: raw, address: resolved, ens: raw };
-    } catch {
-      return { ok:false, reason:"ENS_ERROR" };
-    }
+  try{
+    const resolved = await ensProvider.resolveName(raw);
+    if(!resolved) return { ok:false, reason:"ENS_NOT_FOUND" };
+    return { ok:true, display: raw, address: resolved, ens: raw };
+  } catch (e){
+    console.log("ENS resolution error:", e);
+    return { ok:false, reason:"ENS_ERROR" };
   }
+}
+
 
   return { ok:false, reason:"UNKNOWN_FORMAT" };
 }
