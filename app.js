@@ -39,7 +39,8 @@ const inboxBtn = document.getElementById("inboxBtn");
 const inboxMenu = document.getElementById("inboxMenu");
 const inboxItems = document.getElementById("inboxItems");
 const addressList = document.getElementById("addressList");
-
+const toInput = document.getElementById("toInput");
+const toGoBtn = document.getElementById("toGoBtn");
 const centerText = document.getElementById("centerText");
 const composerLabel = document.getElementById("composerLabel");
 const composerInput = document.getElementById("composerInput");
@@ -56,6 +57,41 @@ if(!walletStatus){
 
 
 // ---- Render functions ----
+async function normalizeRecipient(input){
+  const raw = (input || "").trim();
+  if(!raw) return { ok:false, reason:"EMPTY" };
+
+  // If wallet not connected, we can still accept raw input but can't ENS-resolve
+  const hasProvider = !!window.ethereum;
+
+  // If it's a 0x address, validate
+  if(raw.startsWith("0x")){
+    try{
+      const isValid = ethers.isAddress(raw);
+      if(!isValid) return { ok:false, reason:"INVALID_ADDRESS" };
+      return { ok:true, display: raw, address: raw, ens: null };
+    } catch {
+      return { ok:false, reason:"INVALID_ADDRESS" };
+    }
+  }
+
+  // Otherwise treat like ENS name and attempt resolution if possible
+  if(raw.includes(".")){
+    if(!hasProvider) return { ok:false, reason:"NO_PROVIDER_FOR_ENS" };
+
+    try{
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const resolved = await provider.resolveName(raw);
+      if(!resolved) return { ok:false, reason:"ENS_NOT_FOUND" };
+      return { ok:true, display: raw, address: resolved, ens: raw };
+    } catch {
+      return { ok:false, reason:"ENS_ERROR" };
+    }
+  }
+
+  return { ok:false, reason:"UNKNOWN_FORMAT" };
+}
+
 function renderAddresses(){
   addressList.innerHTML = "";
   ADDRESSES.forEach(addr => {
@@ -263,6 +299,53 @@ composerInput.addEventListener("keydown", (e) => {
   }
 });
 sendBtn.onclick = send;
+
+/* ===========================
+   MANUAL "TO:" INPUT HANDLER
+   =========================== */
+
+async function handleToGo(){
+  const result = await normalizeRecipient(toInput.value);
+
+  if(!result.ok){
+    const msg = {
+      EMPTY: "TYPE AN ADDRESS OR ENS NAME.",
+      INVALID_ADDRESS: "INVALID 0x ADDRESS.",
+      NO_PROVIDER_FOR_ENS: "CONNECT WALLET TO RESOLVE ENS.",
+      ENS_NOT_FOUND: "ENS NAME NOT FOUND.",
+      ENS_ERROR: "ENS RESOLUTION ERROR.",
+      UNKNOWN_FORMAT: "ENTER 0x... OR name.eth"
+    }[result.reason] || "INVALID RECIPIENT.";
+
+    centerText.textContent = msg;
+    return;
+  }
+
+  state.activeTo = result.ens || result.address;
+  state.activeToResolved = result.address;
+  state.mode = "compose";
+  state.activeThreadId = null;
+
+  centerText.textContent =
+    `NEW MESSAGE TO: ${String(state.activeTo).toUpperCase()}\n` +
+    `RESOLVED: ${result.address}\n\n` +
+    `TYPE YOUR MESSAGE BELOW.`;
+
+  composerLabel.textContent = "SEND";
+  composerInput.value = "";
+  sendBtn.textContent = "SEND";
+  composerInput.focus();
+}
+
+toGoBtn.onclick = handleToGo;
+toInput.addEventListener("keydown", (e) => {
+  if(e.key === "Enter"){
+    e.preventDefault();
+    handleToGo();
+  }
+});
+
+
 async function connectWallet(){
   if(!window.ethereum){
     centerText.textContent = "METAMASK NOT FOUND. INSTALL METAMASK EXTENSION.";
