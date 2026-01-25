@@ -186,10 +186,12 @@ function send(){
     save(LS_INBOX, inbox);
 
     // Show sent message in center
-    centerText.textContent =
-      `TO: ${state.activeTo.toUpperCase()}\n\n` +
-      `${body}\n\n` +
-      `[SENT]`;
+    const toDisplay = (state.activeToResolved || state.activeTo);
+centerText.textContent =
+  `TO: ${String(toDisplay).toUpperCase()}\n` +
+  (state.activeToResolved ? `ENS: ${state.activeTo.toUpperCase()}\n\n` : `\n`) +
+  `${body}\n\n` +
+  `[SENT]`;
     composerInput.value = "";
     renderInbox();
     return;
