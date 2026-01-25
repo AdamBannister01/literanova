@@ -126,11 +126,13 @@ html, body{
   padding:12px;
 }
 .to-box{
-  display:flex;
+  display:grid;
+  grid-template-columns: 34px 1fr 44px;
   gap:8px;
   align-items:center;
   margin-bottom:10px;
 }
+
 .to-label{
   color: var(--muted);
   font-weight:700;
@@ -154,11 +156,12 @@ html, body{
   background:transparent;
   border:1px solid var(--green2);
   color:var(--green);
-  padding:8px 10px;
+  padding:8px 8px;
   border-radius:10px;
   cursor:pointer;
   letter-spacing:0.08em;
 }
+
 .to-btn:hover{
   border-color: var(--green);
 }
