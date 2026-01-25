@@ -13,6 +13,8 @@ const state = {
   activeThreadId: null,
   inboxOpen: false
 };
+let myAddress = null; // becomes 0x... after connect
+
 
 // LocalStorage keys
 const LS_THREADS = "literanova_threads_v0";
@@ -41,6 +43,9 @@ const centerText = document.getElementById("centerText");
 const composerLabel = document.getElementById("composerLabel");
 const composerInput = document.getElementById("composerInput");
 const sendBtn = document.getElementById("sendBtn");
+const connectBtn = document.getElementById("connectBtn");
+const walletStatus = document.getElementById("walletStatus");
+
 
 // ---- Render functions ----
 function renderAddresses(){
@@ -124,8 +129,12 @@ function openThread(threadId){
 function send(){
   const body = composerInput.value.trim();
   if(!body) return;
+  
+  if(!myAddress){
+    centerText.textContent = "CONNECT WALLET FIRST.";
+    return;
+  }
 
-  const myAddress = "you.eth"; // MVP placeholder "logged in" identity
 
   // Compose mode: create a new "thread" (represents minting the thread NFT later)
   if(state.mode === "compose"){
@@ -217,6 +226,29 @@ composerInput.addEventListener("keydown", (e) => {
   }
 });
 sendBtn.onclick = send;
+async function connectWallet(){
+  if(!window.ethereum){
+    centerText.textContent = "METAMASK NOT FOUND. INSTALL METAMASK EXTENSION.";
+    return;
+  }
+
+  try{
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    myAddress = accounts[0];
+    walletStatus.textContent = myAddress;
+
+    window.ethereum.on("accountsChanged", (accs) => {
+      myAddress = accs?.[0] || null;
+      walletStatus.textContent = myAddress || "NOT CONNECTED";
+    });
+
+    centerText.textContent = "WALLET CONNECTED.\n\nSELECT AN ADDRESS OR OPEN INBOX.";
+  } catch (e){
+    centerText.textContent = "WALLET CONNECTION CANCELLED.";
+  }
+}
+
+connectBtn.onclick = connectWallet;
 
 // ---- Init ----
 renderAddresses();
