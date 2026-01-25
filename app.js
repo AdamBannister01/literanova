@@ -337,13 +337,19 @@ async function handleToGo(){
   composerInput.focus();
 }
 
-toGoBtn.onclick = handleToGo;
-toInput.addEventListener("keydown", (e) => {
-  if(e.key === "Enter"){
-    e.preventDefault();
-    handleToGo();
-  }
-});
+if(toGoBtn && toInput){
+  toGoBtn.onclick = handleToGo;
+  toInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      e.preventDefault();
+      handleToGo();
+    }
+  });
+} else {
+  // If the HTML isn't updated yet, don't crash the app
+  // (You just won't see the TO box until index.html is updated)
+  console.log("TO input UI not found (toInput/toGoBtn missing in HTML).");
+}
 
 
 async function connectWallet(){
