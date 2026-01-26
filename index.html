@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,63 +18,78 @@
   <div class="top-left">
     <div class="brand">LITERANOVA</div>
 
-<div class="inbox">
-  <button id="inboxBtn" class="icon-btn" aria-label="Inbox">
-    ✉
-  </button>
+    <div class="inbox">
+      <button id="inboxBtn" class="icon-btn" aria-label="Inbox">✉</button>
 
-  <div class="wallet">
-    <button id="connectBtn" class="icon-btn">CONNECT WALLET</button>
-    <div id="walletStatus" class="wallet-status">NOT CONNECTED</div>
-  </div>
+      <div class="wallet">
+        <button id="connectBtn" class="icon-btn">CONNECT WALLET</button>
+        <div id="walletStatus" class="wallet-status">NOT CONNECTED</div>
+      </div>
 
-  <div id="inboxMenu" class="dropdown hidden">
-    <div class="dropdown-title">INBOX</div>
-    <div id="inboxItems" class="dropdown-items"></div>
-  </div>
-</div>
-
+      <div id="inboxMenu" class="dropdown hidden">
+        <div class="dropdown-title">INBOX</div>
+        <div id="inboxItems" class="dropdown-items"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Right-side address book -->
   <div class="right-rail">
-  <div class="rail-title">ADDRESSES</div>
+    <div class="rail-title">ADDRESSES</div>
 
-  <div class="to-box">
-    <div class="to-label">TO:</div>
-    <input id="toInput" class="to-input" placeholder="0x... or name.eth" autocomplete="off" spellcheck="false" />
-    <button id="toGoBtn" class="to-btn">GO</button>
+    <!-- TO search -->
+    <div class="to-box">
+      <div class="to-label">TO:</div>
+      <input id="toInput" class="to-input" placeholder="0x... or name.eth" autocomplete="off" spellcheck="false" />
+      <button id="toGoBtn" class="to-btn">GO</button>
+    </div>
+
+    <!-- Favorites + Contacts -->
+    <div class="section-title">FAVORITES</div>
+    <div id="favoritesList" class="address-list small"></div>
+
+    <div class="section-title">CONTACTS</div>
+    <div id="contactsList" class="address-list small"></div>
+
+    <div class="rail-divider"></div>
+
+    <!-- Existing list -->
+    <div class="section-title">ALL</div>
+    <div id="addressList" class="address-list"></div>
   </div>
-
-  <div class="rail-divider"></div>
-
-  <div id="addressList" class="address-list"></div>
-</div>
-
 
   <!-- Center content -->
   <main class="center">
+    <!-- Constant animation (we'll style it in CSS) -->
+    <div id="signal" class="signal" aria-hidden="true"></div>
+
     <div id="centerText" class="center-text">
       SELECT AN ADDRESS TO SEND A MESSAGE<br/>
       OR OPEN THE INBOX.
+    </div>
+
+    <!-- Add buttons (hidden until we resolve a real address) -->
+    <div id="addButtons" class="add-buttons hidden">
+      <button id="addFavBtn" class="action-btn">ADD TO FAVORITES</button>
+      <button id="addContactBtn" class="action-btn">ADD TO CONTACTS</button>
     </div>
 
     <!-- Compose / reply area (changes depending on mode) -->
     <div id="composer" class="composer">
       <div class="composer-row">
         <span id="composerLabel" class="label">SEND</span>
+
         <div class="line-wrap">
           <input id="composerInput" class="line-input" autocomplete="off" spellcheck="false" />
           <div class="line"></div>
         </div>
+
         <button id="sendBtn" class="send-btn">SEND</button>
       </div>
     </div>
   </main>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
-<script src="app.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
-
