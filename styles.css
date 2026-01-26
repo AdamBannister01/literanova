@@ -40,7 +40,7 @@ html, body{
   font-weight:900;
   font-size:32px;              /* or whatever size you want */
   letter-spacing:0.20em;       /* was 0.16em */
-  padding-right:0.18em;        /* ✅ gives the last "M" room */
+  padding-right:0.24em;        /* ✅ gives the last "M" room */
   text-transform:uppercase;
   transform: skewX(-10deg);
   transform-origin: left center;
