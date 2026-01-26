@@ -236,22 +236,23 @@ html, body{
 }
 
 /* ✅ Constant animation centered between top and message area */
-/* ✅ Retro spinning globe container */
+/* ✅ Retro spinning globe container (ALWAYS above message area) */
 .signal{
-  position:fixed;
-  top:18%;
-  left:50%;
-  transform:translateX(-50%);
-  width:260px;
-  height:260px;
+  position:relative;          /* IMPORTANT: in normal layout flow */
+  width:240px;
+  height:240px;
+  margin: 0 auto 10px auto;   /* space under globe */
   border:1px solid rgba(57,255,20,0.22);
   border-radius:14px;
   box-shadow: 0 0 18px rgba(57,255,20,0.12);
   background: rgba(0,0,0,0.25);
   overflow:hidden;
+
+  /* subtle “screen glow” vibe */
+  filter: drop-shadow(0 0 12px rgba(57,255,20,0.12));
 }
 
-/* Remove old sweep animation */
+/* remove old sweep animation */
 .signal::before{ content:none; }
 
 /* Canvas fills the box */
@@ -261,12 +262,18 @@ html, body{
   display:block;
 }
 
-.center-text{
-  max-width: 780px;
-  line-height:1.6;
-  text-shadow: 0 0 10px var(--green2);
-  font-size:18px;
-  white-space:pre-wrap;
+.center{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;   /* was center */
+  padding:24px;
+  text-align:center;
+  gap:16px;
+  padding-top: 110px;           /* gives room below top-left UI */
 }
 
 /* ✅ Add-to buttons area */
