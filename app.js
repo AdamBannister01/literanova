@@ -23,9 +23,26 @@ const LS_INBOX     = "literanova_inbox_v0";
 const LS_FAVORITES = "literanova_favorites_v0";
 const LS_CONTACTS  = "literanova_contacts_v0";
 
-// ENS resolution should use Ethereum mainnet (works even if wallet is on Base)
-const ENS_MAINNET_RPC = "https://cloudflare-eth.com";
-const ensProvider = new ethers.JsonRpcProvider(ENS_MAINNET_RPC);
+// ---- ENS resolution with fallback RPCs (reliable) ----
+const ENS_RPCS = [
+  "https://ethereum.publicnode.com",
+  "https://rpc.ankr.com/eth",
+  "https://cloudflare-eth.com"
+];
+
+async function resolveEnsWithFallback(name){
+  const n = String(name || "").trim().toLowerCase();
+  for(const url of ENS_RPCS){
+    try{
+      const p = new ethers.JsonRpcProvider(url);
+      const addr = await p.resolveName(n);
+      if(addr) return addr;
+    } catch (e){
+      console.log("ENS RPC failed:", url, e?.shortMessage || e?.message || e);
+    }
+  }
+  return null;
+}
 
 // ---- Basic store helpers ----
 function load(key, fallback){
@@ -162,7 +179,7 @@ async function normalizeRecipient(input){
   // ENS name
   if(raw.includes(".")){
     try{
-      const resolved = await ensProvider.resolveName(raw);
+      const resolved = await resolveEnsWithFallback(raw);
       if(!resolved) return { ok:false, reason:"ENS_NOT_FOUND" };
       return { ok:true, display: raw, address: resolved, ens: raw };
     } catch (e){
@@ -217,6 +234,7 @@ async function openComposer(toAddress){
   state.activeToResolved = null;
   state.activeThreadId = null;
 
+  // ALWAYS hide first
   showAddButtons(false);
 
   setCenter(
@@ -227,13 +245,9 @@ async function openComposer(toAddress){
 
   let resolved = null;
 
-  // Resolve ENS using Ethereum mainnet provider (works even if wallet is on Base)
+  // Resolve ENS via fallback RPCs
   if(String(toAddress).includes(".")){
-    try{
-      resolved = await ensProvider.resolveName(toAddress);
-    } catch(e){
-      resolved = null;
-    }
+    resolved = await resolveEnsWithFallback(toAddress);
   } else if(String(toAddress).startsWith("0x") && isAddr(toAddress)){
     resolved = toAddress;
   }
@@ -246,8 +260,8 @@ async function openComposer(toAddress){
     `TYPE YOUR MESSAGE BELOW.`
   );
 
-  // Buttons only appear if resolved exists
-  showAddButtons(!!resolved);
+  // Only show when resolved is a valid address
+  showAddButtons(!!resolved && isAddr(resolved));
 
   composerLabel.textContent = "SEND";
   composerInput.value = "";
@@ -257,7 +271,6 @@ async function openComposer(toAddress){
 }
 
 function openThread(threadId){
-  // remove from inbox on open
   const inbox = load(LS_INBOX, []);
   save(LS_INBOX, inbox.filter(m => m.threadId !== threadId));
 
@@ -296,7 +309,6 @@ function send(){
     return;
   }
 
-  // Compose mode: create a new "thread"
   if(state.mode === "compose"){
     const threadId = uid();
     const toTarget = state.activeToResolved || state.activeTo;
@@ -315,7 +327,6 @@ function send(){
     };
     save(LS_THREADS, threads);
 
-    // Simulate that recipient got a "new message"
     const inbox = load(LS_INBOX, []);
     inbox.unshift({ threadId, from: myAddress, ts: Date.now() });
     save(LS_INBOX, inbox);
@@ -333,7 +344,6 @@ function send(){
     return;
   }
 
-  // Thread mode: append to existing thread
   if(state.mode === "thread"){
     const threads = load(LS_THREADS, {});
     const thread = threads[state.activeThreadId];
@@ -371,7 +381,6 @@ inboxBtn.onclick = () => {
   renderInbox();
 };
 
-// Close dropdown if click elsewhere
 document.addEventListener("click", (e) => {
   const clickedInside = e.target.closest(".inbox");
   if(!clickedInside && state.inboxOpen){
@@ -417,7 +426,7 @@ async function handleToGo(){
     `TYPE YOUR MESSAGE BELOW.`
   );
 
-  showAddButtons(true);
+  showAddButtons(!!result.address && isAddr(result.address));
 
   composerLabel.textContent = "SEND";
   composerInput.value = "";
@@ -438,7 +447,7 @@ if(toGoBtn && toInput){
 // ---- Add buttons behavior ----
 if(addFavBtn){
   addFavBtn.onclick = () => {
-    if(!state.activeToResolved) return;
+    if(!state.activeToResolved || !isAddr(state.activeToResolved)) return;
     const label = (String(state.activeTo).includes(".") ? String(state.activeTo) : shortAddr(state.activeToResolved));
     addToList(LS_FAVORITES, label, state.activeToResolved);
     setCenter(`ADDED TO FAVORITES:\n${label.toUpperCase()}\n${state.activeToResolved}`);
@@ -447,7 +456,7 @@ if(addFavBtn){
 
 if(addContactBtn){
   addContactBtn.onclick = () => {
-    if(!state.activeToResolved) return;
+    if(!state.activeToResolved || !isAddr(state.activeToResolved)) return;
     const label = (String(state.activeTo).includes(".") ? String(state.activeTo) : shortAddr(state.activeToResolved));
     addToList(LS_CONTACTS, label, state.activeToResolved);
     setCenter(`ADDED TO CONTACTS:\n${label.toUpperCase()}\n${state.activeToResolved}`);
@@ -480,6 +489,7 @@ async function connectWallet(){
 connectBtn.onclick = connectWallet;
 
 // ---- Init ----
+showAddButtons(false);
 renderAddresses();
 renderInbox();
 renderSavedLists();
@@ -500,7 +510,6 @@ openComposer("neo.eth");
   function loop(){
     t += 0.01;
     ctx.clearRect(0,0,c.width,c.height);
-    // minimal "scanlines"
     for(let y=0; y<c.height; y+=6){
       const a = 0.03 + 0.02*Math.sin(t + y*0.02);
       ctx.fillStyle = `rgba(57,255,20,${a})`;
