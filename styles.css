@@ -43,6 +43,9 @@ html, body{
   text-transform:uppercase;
   transform: skewX(-10deg);  /* ✅ slanted */
   text-shadow: 0 0 16px rgba(57,255,20,0.35);
+  transform: skewX(-10deg) scaleY(1.05);
+
+
 }
 
 .inbox{
