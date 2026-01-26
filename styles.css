@@ -35,29 +35,36 @@ html, body{
   flex-direction:column;
   gap:10px;
 }
+
 .brand{
-  font-weight:800;
-  letter-spacing:0.12em;
+  font-weight:900;
+  font-size:26px;            /* ✅ slightly larger */
+  letter-spacing:0.16em;
   text-transform:uppercase;
-  text-shadow: 0 0 10px var(--green2);
+  transform: skewX(-10deg);  /* ✅ slanted */
+  text-shadow: 0 0 16px rgba(57,255,20,0.35);
 }
+
 .inbox{
   position:relative;
   display:flex;
   align-items:center;
   gap:10px;
 }
+
 .wallet{
   display:flex;
   flex-direction:column;
   gap:6px;
   max-width:260px;
 }
+
 .wallet-status{
   font-size:12px;
   color: rgba(57,255,20,0.7);
   word-break: break-all;
 }
+
 .icon-btn{
   background:transparent;
   border:1px solid var(--green2);
@@ -125,6 +132,7 @@ html, body{
   border-radius:12px;
   padding:12px;
 }
+
 .to-box{
   display:grid;
   grid-template-columns: 34px 1fr 44px;
@@ -139,6 +147,7 @@ html, body{
   letter-spacing:0.08em;
   font-size:12px;
 }
+
 .to-input{
   flex:1;
   background: rgba(0,0,0,0.55);
@@ -152,6 +161,7 @@ html, body{
 .to-input:focus{
   border-color: var(--green);
 }
+
 .to-btn{
   background:transparent;
   border:1px solid var(--green2);
@@ -161,26 +171,45 @@ html, body{
   cursor:pointer;
   letter-spacing:0.08em;
 }
-
 .to-btn:hover{
   border-color: var(--green);
 }
+
+/* ✅ New section labels for Favorites/Contacts/All */
+.section-title{
+  color: var(--muted);
+  font-weight:700;
+  letter-spacing:0.08em;
+  font-size:12px;
+  margin:10px 0 6px 0;
+}
+
 .rail-divider{
   height:1px;
   background: rgba(57,255,20,0.2);
   margin:10px 0 12px 0;
 }
+
 .rail-title{
   color: var(--muted);
   font-weight:700;
   letter-spacing:0.08em;
   margin-bottom:10px;
 }
+
 .address-list{
   display:flex;
   flex-direction:column;
   gap:8px;
 }
+
+/* ✅ Smaller cards for Favorites/Contacts */
+.address-list.small .address{
+  padding:7px 8px;
+  font-size:12px;
+  border-radius:10px;
+}
+
 .address{
   border:1px solid rgba(57,255,20,0.18);
   padding:8px;
@@ -203,8 +232,37 @@ html, body{
   justify-content:center;
   padding:24px;
   text-align:center;
-  gap:26px;
+  gap:16px; /* slightly tighter */
 }
+
+/* ✅ Constant animation centered between top and message area */
+.signal{
+  position:fixed;
+  top:22%;
+  left:50%;
+  transform:translateX(-50%);
+  width:220px;
+  height:26px;
+  border:1px solid rgba(57,255,20,0.22);
+  border-radius:999px;
+  box-shadow: 0 0 14px rgba(57,255,20,0.12);
+  overflow:hidden;
+}
+.signal::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:-40%;
+  width:40%;
+  height:100%;
+  background: linear-gradient(90deg, transparent, rgba(57,255,20,0.5), transparent);
+  animation: sweep 1.35s linear infinite;
+}
+@keyframes sweep{
+  from { left:-40%; }
+  to   { left:100%; }
+}
+
 .center-text{
   max-width: 780px;
   line-height:1.6;
@@ -213,42 +271,69 @@ html, body{
   white-space:pre-wrap;
 }
 
+/* ✅ Add-to buttons area */
+.add-buttons{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  width:320px;
+}
+.action-btn{
+  width:100%;
+  background:transparent;
+  border:1px solid var(--green2);
+  color:var(--green);
+  padding:10px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  letter-spacing:0.08em;
+  text-shadow: 0 0 10px rgba(57,255,20,0.12);
+}
+.action-btn:hover{
+  border-color: var(--green);
+}
+
 /* ----- Composer line ----- */
 .composer{
   width:100%;
   display:flex;
   justify-content:center;
 }
+
 .composer-row{
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:8px;         /* ✅ closer spacing */
   width:100%;
   max-width:900px;
 }
+
 .label{
-  width:70px;
+  width:56px;      /* ✅ brings REPLY/SEND closer to line */
   text-align:left;
   color: var(--muted);
   letter-spacing:0.08em;
 }
+
 .line-wrap{
   flex:1;
   position:relative;
-  /* line starts 1/4 from left and ends 1/4 from right:
-     we implement by padding on the container */
-  padding-left: 25%;
-  padding-right: 25%;
+
+  /* ✅ Message line slightly longer (was 25%) */
+  padding-left: 22%;
+  padding-right: 22%;
 }
+
 .line{
   position:absolute;
-  left:25%;
-  right:25%;
+  left:22%;
+  right:22%;
   bottom:4px;
   height:1px;
   background: rgba(57,255,20,0.55);
   box-shadow: 0 0 12px rgba(57,255,20,0.15);
 }
+
 .line-input{
   width:100%;
   background:transparent;
@@ -259,11 +344,12 @@ html, body{
   padding:10px 0 6px 0;
   text-shadow: 0 0 10px var(--green2);
 }
+
 .send-btn{
   background:transparent;
   border:1px solid var(--green2);
   color:var(--green);
-  padding:10px 12px;
+  padding:9px 10px; /* ✅ closer */
   border-radius:10px;
   cursor:pointer;
   letter-spacing:0.08em;
@@ -278,4 +364,3 @@ html, body{
   .line-wrap{ padding-left: 10%; padding-right: 10%; }
   .line{ left:10%; right:10%; }
 }
-
