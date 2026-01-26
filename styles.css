@@ -238,29 +238,22 @@ html, body{
 /* ✅ Constant animation centered between top and message area */
 /* ✅ Retro spinning globe container (ALWAYS above message area) */
 .signal{
-  position:relative;          /* IMPORTANT: in normal layout flow */
-  width:240px;
-  height:240px;
-  margin: 0 auto 10px auto;   /* space under globe */
+  position: relative;        /* NOT fixed */
+  width: 240px;
+  height: 240px;
+  margin: 0 auto 14px auto;  /* pushes text BELOW it */
   border:1px solid rgba(57,255,20,0.22);
   border-radius:14px;
   box-shadow: 0 0 18px rgba(57,255,20,0.12);
   background: rgba(0,0,0,0.25);
   overflow:hidden;
-
-  /* subtle “screen glow” vibe */
-  filter: drop-shadow(0 0 12px rgba(57,255,20,0.12));
 }
-
-/* remove old sweep animation */
-.signal::before{ content:none; }
-
-/* Canvas fills the box */
 #globe{
   width:100%;
   height:100%;
   display:block;
 }
+
 
 .center{
   position:relative;
@@ -269,12 +262,15 @@ html, body{
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:flex-start;   /* was center */
-  padding:24px;
+
+  justify-content:flex-start;  /* was center */
+  padding-top: 110px;          /* creates breathing room below header */
+  padding-left:24px;
+  padding-right:24px;
   text-align:center;
   gap:16px;
-  padding-top: 110px;           /* gives room below top-left UI */
 }
+
 
 /* ✅ Add-to buttons area */
 .add-buttons{
