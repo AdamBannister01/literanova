@@ -519,3 +519,137 @@ openComposer("neo.eth");
   }
   loop();
 })();
+// ===========================
+// RETRO WIREFRAME GLOBE (CANVAS)
+// ===========================
+(function wireGlobe(){
+  const canvas = document.getElementById("globe");
+  if(!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+
+  function resize(){
+    // Match CSS pixels for crispness
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // Sphere + grid settings
+  const R = 95;                 // globe radius (in CSS px)
+  const cx = () => canvas.getBoundingClientRect().width / 2;
+  const cy = () => canvas.getBoundingClientRect().height / 2;
+
+  // Simple rotation helpers
+  function rotY(p, a){
+    const s = Math.sin(a), c = Math.cos(a);
+    return { x: p.x*c + p.z*s, y: p.y, z: -p.x*s + p.z*c };
+  }
+  function rotX(p, a){
+    const s = Math.sin(a), c = Math.cos(a);
+    return { x: p.x, y: p.y*c - p.z*s, z: p.y*s + p.z*c };
+  }
+
+  // Perspective projection
+  function project(p){
+    const depth = 260; // camera distance
+    const scale = depth / (depth + p.z);
+    return { x: cx() + p.x * scale, y: cy() + p.y * scale, s: scale };
+  }
+
+  // Draw a polyline with depth shading
+  function drawPath(points, color){
+    ctx.beginPath();
+    for(let i=0;i<points.length;i++){
+      const p = project(points[i]);
+      if(i===0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
+
+  let t = 0;
+
+  function frame(){
+    const w = canvas.getBoundingClientRect().width;
+    const h = canvas.getBoundingClientRect().height;
+
+    ctx.clearRect(0,0,w,h);
+
+    // Subtle glow background
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillRect(0,0,w,h);
+
+    // Globe outline glow
+    ctx.lineWidth = 1;
+
+    // Rotation angles
+    t += 0.012;
+    const ay = t;          // spin around vertical axis
+    const ax = -0.35;      // tilt
+
+    // Choose 3 retro colors (green, blue, red) for “bands”
+    const cGreen = "rgba(57,255,20,0.75)";
+    const cBlue  = "rgba(80,160,255,0.55)";
+    const cRed   = "rgba(255,80,120,0.45)";
+    const cDim   = "rgba(57,255,20,0.18)";
+
+    // Draw latitude rings
+    for(let lat = -60; lat <= 60; lat += 20){
+      const pts = [];
+      const phi = (lat * Math.PI) / 180;
+      const y = Math.sin(phi) * R;
+      const r = Math.cos(phi) * R;
+
+      for(let deg=0; deg<=360; deg+=8){
+        const th = (deg * Math.PI) / 180;
+        let p = { x: Math.cos(th)*r, y, z: Math.sin(th)*r };
+        p = rotY(p, ay);
+        p = rotX(p, ax);
+        pts.push(p);
+      }
+
+      // Color some bands
+      const bandColor = (lat === 0) ? cGreen : (lat === 20 || lat === -20) ? cBlue : cRed;
+      ctx.lineWidth = 1;
+      drawPath(pts, bandColor);
+    }
+
+    // Draw longitude arcs
+    for(let lon = 0; lon < 180; lon += 20){
+      const pts = [];
+      const th0 = (lon * Math.PI) / 180;
+
+      for(let deg=-90; deg<=90; deg+=6){
+        const phi = (deg * Math.PI) / 180;
+        let p = {
+          x: Math.cos(th0)*Math.cos(phi)*R,
+          y: Math.sin(phi)*R,
+          z: Math.sin(th0)*Math.cos(phi)*R
+        };
+        p = rotY(p, ay);
+        p = rotX(p, ax);
+        pts.push(p);
+      }
+
+      ctx.lineWidth = 1;
+      drawPath(pts, cDim);
+    }
+
+    // Outer sphere outline (a faint ring)
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, R, 0, Math.PI*2);
+    ctx.strokeStyle = "rgba(57,255,20,0.20)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
