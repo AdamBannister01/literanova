@@ -60,25 +60,22 @@
 
   <!-- Center content -->
   <main class="center">
-    <!-- Constant animation (we'll style it in CSS) -->
+    <!-- Constant animation -->
     <div id="signal" class="signal" aria-hidden="true"></div>
 
+    <!-- Main message text -->
     <div id="centerText" class="center-text">
-      <div id="addButtons" class="add-buttons hidden">
-  <button id="addFavBtn" class="action-btn">ADD TO FAVORITES</button>
-  <button id="addContactBtn" class="action-btn">ADD TO CONTACTS</button>
-</div>
       SELECT AN ADDRESS TO SEND A MESSAGE<br/>
       OR OPEN THE INBOX.
     </div>
 
-    <!-- Add buttons (hidden until we resolve a real address) -->
+    <!-- Add buttons (ONLY ONE COPY) -->
     <div id="addButtons" class="add-buttons hidden">
       <button id="addFavBtn" class="action-btn">ADD TO FAVORITES</button>
       <button id="addContactBtn" class="action-btn">ADD TO CONTACTS</button>
     </div>
 
-    <!-- Compose / reply area (changes depending on mode) -->
+    <!-- Compose / reply area -->
     <div id="composer" class="composer">
       <div class="composer-row">
         <span id="composerLabel" class="label">SEND</span>
