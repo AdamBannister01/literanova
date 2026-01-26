@@ -10,23 +10,24 @@ const ADDRESSES = [
 const state = {
   mode: "compose", // compose | thread
   activeTo: null,
-  activeToResolved: null,   // ✅ add this
+  activeToResolved: null,
   activeThreadId: null,
   inboxOpen: false
 };
+
 let myAddress = null; // becomes 0x... after connect
 
-
 // LocalStorage keys
-const LS_THREADS = "literanova_threads_v0";
-const LS_INBOX = "literanova_inbox_v0";
+const LS_THREADS   = "literanova_threads_v0";
+const LS_INBOX     = "literanova_inbox_v0";
+const LS_FAVORITES = "literanova_favorites_v0";
+const LS_CONTACTS  = "literanova_contacts_v0";
 
 // ENS resolution should use Ethereum mainnet (works even if wallet is on Base)
 const ENS_MAINNET_RPC = "https://cloudflare-eth.com";
 const ensProvider = new ethers.JsonRpcProvider(ENS_MAINNET_RPC);
 
-
-// Basic store helpers
+// ---- Basic store helpers ----
 function load(key, fallback){
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
   catch { return fallback; }
@@ -34,69 +35,146 @@ function load(key, fallback){
 function save(key, value){
   localStorage.setItem(key, JSON.stringify(value));
 }
-
 function uid(){
   return Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+function isAddr(x){
+  try { return ethers.isAddress(x); } catch { return false; }
+}
+function shortAddr(a){
+  if(!a || typeof a !== "string") return "";
+  if(!a.startsWith("0x")) return a;
+  return a.slice(0,6) + "..." + a.slice(-4);
+}
+function uniqByAddress(list){
+  const seen = new Set();
+  const out = [];
+  for(const item of list){
+    const addr = (item?.address || "").toLowerCase();
+    if(!addr) continue;
+    if(seen.has(addr)) continue;
+    seen.add(addr);
+    out.push(item);
+  }
+  return out;
 }
 
 // ---- UI refs ----
 const inboxBtn = document.getElementById("inboxBtn");
 const inboxMenu = document.getElementById("inboxMenu");
 const inboxItems = document.getElementById("inboxItems");
+
 const addressList = document.getElementById("addressList");
+const favoritesList = document.getElementById("favoritesList");
+const contactsList = document.getElementById("contactsList");
+
 const toInput = document.getElementById("toInput");
 const toGoBtn = document.getElementById("toGoBtn");
+
 const centerText = document.getElementById("centerText");
+
+const addButtons = document.getElementById("addButtons");
+const addFavBtn = document.getElementById("addFavBtn");
+const addContactBtn = document.getElementById("addContactBtn");
+
 const composerLabel = document.getElementById("composerLabel");
 const composerInput = document.getElementById("composerInput");
 const sendBtn = document.getElementById("sendBtn");
+
 const connectBtn = document.getElementById("connectBtn");
 const walletStatus = document.getElementById("walletStatus");
 
-// --- Debug checks ---
-if(!connectBtn){
-  centerText.textContent = "ERROR: CONNECT BUTTON NOT FOUND (connectBtn is null).";
-}
-if(!walletStatus){
-  centerText.textContent = "ERROR: WALLET STATUS ELEMENT NOT FOUND (walletStatus is null).";
+// ---- Small UI helpers ----
+function showAddButtons(show){
+  if(!addButtons) return;
+  addButtons.classList.toggle("hidden", !show);
 }
 
+function setCenter(msg){
+  centerText.textContent = msg;
+}
 
-// ---- Render functions ----
+// ---- Favorites / Contacts ----
+function getFavorites(){ return load(LS_FAVORITES, []); }
+function getContacts(){ return load(LS_CONTACTS, []); }
+
+function addToList(key, label, address){
+  const list = load(key, []);
+  list.push({ label, address, ts: Date.now() });
+  save(key, uniqByAddress(list));
+  renderSavedLists();
+}
+
+function renderSavedLists(){
+  if(favoritesList){
+    favoritesList.innerHTML = "";
+    const favs = getFavorites();
+    if(favs.length === 0){
+      const el = document.createElement("div");
+      el.className = "address";
+      el.style.opacity = "0.6";
+      el.textContent = "—";
+      favoritesList.appendChild(el);
+    } else {
+      favs.forEach(item => {
+        const el = document.createElement("div");
+        el.className = "address";
+        el.textContent = String(item.label || shortAddr(item.address)).toUpperCase();
+        el.onclick = () => openComposer(item.label || item.address);
+        favoritesList.appendChild(el);
+      });
+    }
+  }
+
+  if(contactsList){
+    contactsList.innerHTML = "";
+    const cons = getContacts();
+    if(cons.length === 0){
+      const el = document.createElement("div");
+      el.className = "address";
+      el.style.opacity = "0.6";
+      el.textContent = "—";
+      contactsList.appendChild(el);
+    } else {
+      cons.forEach(item => {
+        const el = document.createElement("div");
+        el.className = "address";
+        el.textContent = String(item.label || shortAddr(item.address)).toUpperCase();
+        el.onclick = () => openComposer(item.label || item.address);
+        contactsList.appendChild(el);
+      });
+    }
+  }
+}
+
+// ---- Recipient parsing (0x or ENS) ----
 async function normalizeRecipient(input){
   const raw = (input || "").trim();
   if(!raw) return { ok:false, reason:"EMPTY" };
 
-  // If wallet not connected, we can still accept raw input but can't ENS-resolve
-  const hasProvider = !!window.ethereum;
-
-  // If it's a 0x address, validate
+  // 0x address
   if(raw.startsWith("0x")){
+    const ok = isAddr(raw);
+    if(!ok) return { ok:false, reason:"INVALID_ADDRESS" };
+    return { ok:true, display: shortAddr(raw), address: raw, ens: null };
+  }
+
+  // ENS name
+  if(raw.includes(".")){
     try{
-      const isValid = ethers.isAddress(raw);
-      if(!isValid) return { ok:false, reason:"INVALID_ADDRESS" };
-      return { ok:true, display: raw, address: raw, ens: null };
-    } catch {
-      return { ok:false, reason:"INVALID_ADDRESS" };
+      const resolved = await ensProvider.resolveName(raw);
+      if(!resolved) return { ok:false, reason:"ENS_NOT_FOUND" };
+      return { ok:true, display: raw, address: resolved, ens: raw };
+    } catch (e){
+      console.log("ENS resolution error:", e);
+      return { ok:false, reason:"ENS_ERROR" };
     }
   }
-
-  // Otherwise treat like ENS name and attempt resolution if possible
-  if(raw.includes(".")){
-  try{
-    const resolved = await ensProvider.resolveName(raw);
-    if(!resolved) return { ok:false, reason:"ENS_NOT_FOUND" };
-    return { ok:true, display: raw, address: resolved, ens: raw };
-  } catch (e){
-    console.log("ENS resolution error:", e);
-    return { ok:false, reason:"ENS_ERROR" };
-  }
-}
-
 
   return { ok:false, reason:"UNKNOWN_FORMAT" };
 }
 
+// ---- Render functions ----
 function renderAddresses(){
   addressList.innerHTML = "";
   ADDRESSES.forEach(addr => {
@@ -124,7 +202,7 @@ function renderInbox(){
     const el = document.createElement("div");
     el.className = "inbox-item";
     el.innerHTML = `
-      <div class="from">FROM: ${item.from.toUpperCase()}</div>
+      <div class="from">FROM: ${String(item.from).toUpperCase()}</div>
       <div class="title">NEW MESSAGE</div>
     `;
     el.onclick = () => openThread(item.threadId);
@@ -132,36 +210,44 @@ function renderInbox(){
   });
 }
 
+// ---- Composer / Threads ----
 async function openComposer(toAddress){
   state.mode = "compose";
   state.activeTo = toAddress;
   state.activeToResolved = null;
   state.activeThreadId = null;
 
-  // Show immediately so you see something happen
-  centerText.textContent =
-    `NEW MESSAGE TO: ${toAddress.toUpperCase()}\n` +
+  showAddButtons(false);
+
+  setCenter(
+    `NEW MESSAGE TO: ${String(toAddress).toUpperCase()}\n` +
     `RESOLVED: (RESOLVING...)\n\n` +
-    `TYPE YOUR MESSAGE BELOW.`;
+    `TYPE YOUR MESSAGE BELOW.`
+  );
 
   let resolved = null;
 
   // Resolve ENS using Ethereum mainnet provider (works even if wallet is on Base)
-if(toAddress.includes(".")){
-  try{
-    resolved = await ensProvider.resolveName(toAddress);
-  } catch(e){
-    resolved = null;
+  if(String(toAddress).includes(".")){
+    try{
+      resolved = await ensProvider.resolveName(toAddress);
+    } catch(e){
+      resolved = null;
+    }
+  } else if(String(toAddress).startsWith("0x") && isAddr(toAddress)){
+    resolved = toAddress;
   }
-}
 
   state.activeToResolved = resolved;
 
-  // Update after resolution attempt
-  centerText.textContent =
-    `NEW MESSAGE TO: ${toAddress.toUpperCase()}\n` +
+  setCenter(
+    `NEW MESSAGE TO: ${String(toAddress).toUpperCase()}\n` +
     (resolved ? `RESOLVED: ${resolved}\n\n` : `RESOLVED: (NOT FOUND)\n\n`) +
-    `TYPE YOUR MESSAGE BELOW.`;
+    `TYPE YOUR MESSAGE BELOW.`
+  );
+
+  // Buttons only appear if resolved exists
+  showAddButtons(!!resolved);
 
   composerLabel.textContent = "SEND";
   composerInput.value = "";
@@ -169,7 +255,6 @@ if(toAddress.includes(".")){
   sendBtn.textContent = "SEND";
   composerInput.focus();
 }
-
 
 function openThread(threadId){
   // remove from inbox on open
@@ -179,20 +264,21 @@ function openThread(threadId){
   state.mode = "thread";
   state.activeThreadId = threadId;
 
+  showAddButtons(false);
+
   const threads = load(LS_THREADS, {});
   const thread = threads[threadId];
   if(!thread){
-    centerText.textContent = "THREAD NOT FOUND.";
+    setCenter("THREAD NOT FOUND.");
     return;
   }
 
-  // Display the latest message in the center (MVP)
   const last = thread.messages[thread.messages.length - 1];
-  centerText.textContent =
-    `FROM: ${last.from.toUpperCase()}\n` +
-    `TO: ${last.to.toUpperCase()}\n` +
-    `\n` +
-    `${last.body}\n`;
+  setCenter(
+    `FROM: ${String(last.from).toUpperCase()}\n` +
+    `TO: ${String(last.to).toUpperCase()}\n\n` +
+    `${last.body}\n`
+  );
 
   composerLabel.textContent = "REPLY";
   composerInput.value = "";
@@ -204,25 +290,25 @@ function openThread(threadId){
 function send(){
   const body = composerInput.value.trim();
   if(!body) return;
-  
+
   if(!myAddress){
-    centerText.textContent = "CONNECT WALLET FIRST.";
+    setCenter("CONNECT WALLET FIRST.");
     return;
   }
 
-
-  // Compose mode: create a new "thread" (represents minting the thread NFT later)
+  // Compose mode: create a new "thread"
   if(state.mode === "compose"){
     const threadId = uid();
+    const toTarget = state.activeToResolved || state.activeTo;
 
     const threads = load(LS_THREADS, {});
     threads[threadId] = {
       threadId,
-      participants: [myAddress, state.activeToResolved || state.activeTo],
+      participants: [myAddress, toTarget],
       messages: [{
         id: uid(),
         from: myAddress,
-        to: state.activeToResolved || state.activeTo,
+        to: toTarget,
         body,
         ts: Date.now()
       }]
@@ -234,26 +320,26 @@ function send(){
     inbox.unshift({ threadId, from: myAddress, ts: Date.now() });
     save(LS_INBOX, inbox);
 
-    // Show sent message in center
-    const toDisplay = (state.activeToResolved || state.activeTo);
-centerText.textContent =
-  `TO: ${String(toDisplay).toUpperCase()}\n` +
-  (state.activeToResolved ? `ENS: ${state.activeTo.toUpperCase()}\n\n` : `\n`) +
-  `${body}\n\n` +
-  `[SENT]`;
+    setCenter(
+      `TO: ${String(toTarget).toUpperCase()}\n` +
+      (state.activeToResolved && String(state.activeTo).includes(".")
+        ? `ENS: ${String(state.activeTo).toUpperCase()}\n\n`
+        : `\n`) +
+      `${body}\n\n[SENT]`
+    );
+
     composerInput.value = "";
     renderInbox();
     return;
   }
 
-  // Thread mode: append to existing thread (represents postMessage() later)
+  // Thread mode: append to existing thread
   if(state.mode === "thread"){
     const threads = load(LS_THREADS, {});
     const thread = threads[state.activeThreadId];
     if(!thread) return;
 
-    // Determine "other participant"
-    const other = thread.participants.find(p => p !== myAddress) || "unknown.eth";
+    const other = thread.participants.find(p => p !== myAddress) || "unknown";
 
     thread.messages.push({
       id: uid(),
@@ -264,16 +350,15 @@ centerText.textContent =
     });
     save(LS_THREADS, threads);
 
-    // Simulate recipient receives message again
     const inbox = load(LS_INBOX, []);
     inbox.unshift({ threadId: thread.threadId, from: myAddress, ts: Date.now() });
     save(LS_INBOX, inbox);
 
-    // Update center with your reply (or you could show last received; MVP simple)
-    centerText.textContent =
-      `TO: ${other.toUpperCase()}\n\n` +
-      `${body}\n\n` +
-      `[SENT REPLY]`;
+    setCenter(
+      `TO: ${String(other).toUpperCase()}\n\n` +
+      `${body}\n\n[SENT REPLY]`
+    );
+
     composerInput.value = "";
     renderInbox();
   }
@@ -304,10 +389,7 @@ composerInput.addEventListener("keydown", (e) => {
 });
 sendBtn.onclick = send;
 
-/* ===========================
-   MANUAL "TO:" INPUT HANDLER
-   =========================== */
-
+// ---- Manual "TO:" input handler ----
 async function handleToGo(){
   const result = await normalizeRecipient(toInput.value);
 
@@ -315,13 +397,12 @@ async function handleToGo(){
     const msg = {
       EMPTY: "TYPE AN ADDRESS OR ENS NAME.",
       INVALID_ADDRESS: "INVALID 0x ADDRESS.",
-      NO_PROVIDER_FOR_ENS: "CONNECT WALLET TO RESOLVE ENS.",
       ENS_NOT_FOUND: "ENS NAME NOT FOUND.",
       ENS_ERROR: "ENS RESOLUTION ERROR.",
       UNKNOWN_FORMAT: "ENTER 0x... OR name.eth"
     }[result.reason] || "INVALID RECIPIENT.";
-
-    centerText.textContent = msg;
+    setCenter(msg);
+    showAddButtons(false);
     return;
   }
 
@@ -330,10 +411,13 @@ async function handleToGo(){
   state.mode = "compose";
   state.activeThreadId = null;
 
-  centerText.textContent =
+  setCenter(
     `NEW MESSAGE TO: ${String(state.activeTo).toUpperCase()}\n` +
     `RESOLVED: ${result.address}\n\n` +
-    `TYPE YOUR MESSAGE BELOW.`;
+    `TYPE YOUR MESSAGE BELOW.`
+  );
+
+  showAddButtons(true);
 
   composerLabel.textContent = "SEND";
   composerInput.value = "";
@@ -349,16 +433,31 @@ if(toGoBtn && toInput){
       handleToGo();
     }
   });
-} else {
-  // If the HTML isn't updated yet, don't crash the app
-  // (You just won't see the TO box until index.html is updated)
-  console.log("TO input UI not found (toInput/toGoBtn missing in HTML).");
 }
 
+// ---- Add buttons behavior ----
+if(addFavBtn){
+  addFavBtn.onclick = () => {
+    if(!state.activeToResolved) return;
+    const label = (String(state.activeTo).includes(".") ? String(state.activeTo) : shortAddr(state.activeToResolved));
+    addToList(LS_FAVORITES, label, state.activeToResolved);
+    setCenter(`ADDED TO FAVORITES:\n${label.toUpperCase()}\n${state.activeToResolved}`);
+  };
+}
 
+if(addContactBtn){
+  addContactBtn.onclick = () => {
+    if(!state.activeToResolved) return;
+    const label = (String(state.activeTo).includes(".") ? String(state.activeTo) : shortAddr(state.activeToResolved));
+    addToList(LS_CONTACTS, label, state.activeToResolved);
+    setCenter(`ADDED TO CONTACTS:\n${label.toUpperCase()}\n${state.activeToResolved}`);
+  };
+}
+
+// ---- Wallet connect ----
 async function connectWallet(){
   if(!window.ethereum){
-    centerText.textContent = "METAMASK NOT FOUND. INSTALL METAMASK EXTENSION.";
+    setCenter("METAMASK NOT FOUND. INSTALL METAMASK EXTENSION.");
     return;
   }
 
@@ -372,9 +471,9 @@ async function connectWallet(){
       walletStatus.textContent = myAddress || "NOT CONNECTED";
     });
 
-    centerText.textContent = "WALLET CONNECTED.\n\nSELECT AN ADDRESS OR OPEN INBOX.";
+    setCenter("WALLET CONNECTED.\n\nSELECT AN ADDRESS OR OPEN INBOX.");
   } catch (e){
-    centerText.textContent = "WALLET CONNECTION CANCELLED.";
+    setCenter("WALLET CONNECTION CANCELLED.");
   }
 }
 
@@ -383,6 +482,7 @@ connectBtn.onclick = connectWallet;
 // ---- Init ----
 renderAddresses();
 renderInbox();
+renderSavedLists();
 openComposer("neo.eth");
 
 // Optional: simple canvas flicker so it doesn't feel dead
@@ -410,4 +510,3 @@ openComposer("neo.eth");
   }
   loop();
 })();
-
