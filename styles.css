@@ -437,6 +437,9 @@ html, body{
   color: var(--green);
   font-size:16px;
   padding:10px 0 6px 0;
+  resize:none;
+  overflow:hidden;
+  line-height:1.4;
   text-shadow: 0 0 10px var(--green2);
 }
 
