@@ -292,17 +292,49 @@ html, body{
 
 .toggle,
 .attach-btn{
+  position:relative;        /* critical: bounds the absolute input */
+  display:inline-flex;      /* prevents stretching */
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
   border:1px solid rgba(57,255,20,0.18);
   padding:8px 10px;
   border-radius:12px;
   cursor:pointer;
+  letter-spacing:0.08em;
+  user-select:none;
 }
 
 .attach-btn input{
   position:absolute;
-  inset:0;
+  inset:0;                  /* covers only the attach button */
   opacity:0;
+  cursor:pointer;
 }
+
+/* ----- Add-to buttons area (RESTORE STYLING) ----- */
+.add-buttons{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  width:320px;
+}
+
+.action-btn{
+  width:100%;
+  background:transparent;
+  border:1px solid var(--green2);
+  color:var(--green);
+  padding:10px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  letter-spacing:0.08em;
+  text-shadow: 0 0 10px rgba(57,255,20,0.12);
+}
+.action-btn:hover{
+  border-color: var(--green);
+}
+
 
 /* ----- Composer ----- */
 .composer{
