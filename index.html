@@ -11,10 +11,8 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Background effect canvas (optional placeholder) -->
   <canvas id="bg"></canvas>
 
-  <!-- Top-left brand + inbox -->
   <div class="top-left">
     <div class="brand">NOVAGRAM</div>
 
@@ -29,33 +27,28 @@
       <div id="inboxMenu" class="dropdown hidden">
         <div class="dropdown-title">INBOX</div>
 
-<button id="unlockBtn" class="dropdown-action">
-  UNLOCK INBOX (SIGN ONCE)
-</button>
+        <button id="unlockBtn" class="dropdown-action">
+          UNLOCK INBOX (SIGN ONCE)
+        </button>
 
-<div class="dropdown-subtitle">REQUESTS</div>
-<div id="requestItems" class="dropdown-items"></div>
+        <div class="dropdown-subtitle">REQUESTS</div>
+        <div id="requestItems" class="dropdown-items"></div>
 
-<div class="dropdown-subtitle">MESSAGES</div>
-<div id="inboxItems" class="dropdown-items"></div>
-        <div class="dropdown-title">INBOX</div>
+        <div class="dropdown-subtitle">MESSAGES</div>
         <div id="inboxItems" class="dropdown-items"></div>
       </div>
     </div>
   </div>
 
-  <!-- Right-side address book -->
   <div class="right-rail">
     <div class="rail-title">ADDRESSES</div>
 
-    <!-- TO search -->
     <div class="to-box">
       <div class="to-label">TO:</div>
       <input id="toInput" class="to-input" placeholder="0x... or name.eth" autocomplete="off" spellcheck="false" />
       <button id="toGoBtn" class="to-btn">GO</button>
     </div>
 
-    <!-- Favorites + Contacts -->
     <div class="section-title">FAVORITES</div>
     <div id="favoritesList" class="address-list small"></div>
 
@@ -64,44 +57,38 @@
 
     <div class="rail-divider"></div>
 
-    <!-- Existing list -->
     <div class="section-title">ALL</div>
     <div id="addressList" class="address-list"></div>
   </div>
 
-  <!-- Center content -->
   <main class="center">
-    <!-- Constant animation -->
     <div id="signal" class="signal" aria-hidden="true">
-  <canvas id="globe"></canvas>
-</div>
+      <canvas id="globe"></canvas>
+    </div>
 
-    <!-- Main message text -->
     <div id="centerText" class="center-text">
       SELECT AN ADDRESS TO SEND A MESSAGE<br/>
       OR OPEN THE INBOX.
     </div>
 
-    <!-- Add buttons (ONLY ONE COPY) -->
     <div id="addButtons" class="add-buttons hidden">
       <button id="addFavBtn" class="action-btn">ADD TO FAVORITES</button>
       <button id="addContactBtn" class="action-btn">ADD TO CONTACTS</button>
     </div>
 
-    <!-- Compose / reply area -->
     <div class="composer-tools">
-  <label class="toggle">
-    <input id="certifyToggle" type="checkbox" />
-    <span>CERTIFY (NFT)</span>
-  </label>
+      <label class="toggle">
+        <input id="certifyToggle" type="checkbox" />
+        <span>CERTIFY (NFT)</span>
+      </label>
 
-  <label class="attach-btn">
-    <input id="pdfInput" type="file" accept="application/pdf" />
-    ATTACH PDF
-  </label>
+      <label class="attach-btn">
+        <input id="pdfInput" type="file" accept="application/pdf" />
+        ATTACH PDF
+      </label>
 
-  <div id="attachStatus" class="attach-status hidden"></div>
-</div>
+      <div id="attachStatus" class="attach-status hidden"></div>
+    </div>
 
     <div id="composer" class="composer">
       <div class="composer-row">
