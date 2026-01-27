@@ -1,27 +1,26 @@
 // ---- Mock data + state ----
-const ADDRESSES = [
-  "neo.eth",
-  "trinity.eth",
-  "morpheus.eth",
-  "oracle.eth",
-  "smith.eth"
-];
+const ADDRESSES = ["neo.eth","trinity.eth","morpheus.eth","oracle.eth","smith.eth"];
 
 const state = {
   mode: "compose", // compose | thread
   activeTo: null,
   activeToResolved: null,
   activeThreadId: null,
-  inboxOpen: false
+  inboxOpen: false,
+  inboxUnlocked: false,
+  pendingPdf: null,        // { name, size, mime, dataUrl }
 };
 
-let myAddress = null; // becomes 0x... after connect
+let myAddress = null;
 
 // LocalStorage keys
 const LS_THREADS   = "literanova_threads_v0";
 const LS_INBOX     = "literanova_inbox_v0";
 const LS_FAVORITES = "literanova_favorites_v0";
 const LS_CONTACTS  = "literanova_contacts_v0";
+const LS_BLOCKED   = "literanova_blocked_v0";
+const LS_REQUESTS  = "literanova_requests_v0";
+const LS_SESSION   = "literanova_session_v0";
 
 // ---- ENS resolution with fallback RPCs (reliable) ----
 const ENS_RPCS = [
@@ -76,10 +75,27 @@ function uniqByAddress(list){
   return out;
 }
 
+function normAddr(a){ return String(a||"").toLowerCase(); }
+function getContacts(){ return load(LS_CONTACTS, []); }
+function getFavorites(){ return load(LS_FAVORITES, []); }
+function getBlocked(){ return load(LS_BLOCKED, []); }
+function getRequests(){ return load(LS_REQUESTS, []); }
+
+function isKnownContact(address){
+  const a = normAddr(address);
+  return getContacts().some(x => normAddr(x.address) === a);
+}
+function isBlocked(address){
+  const a = normAddr(address);
+  return getBlocked().some(x => normAddr(x.address) === a);
+}
+
 // ---- UI refs ----
 const inboxBtn = document.getElementById("inboxBtn");
 const inboxMenu = document.getElementById("inboxMenu");
 const inboxItems = document.getElementById("inboxItems");
+const requestItems = document.getElementById("requestItems");
+const unlockBtn = document.getElementById("unlockBtn");
 
 const addressList = document.getElementById("addressList");
 const favoritesList = document.getElementById("favoritesList");
@@ -98,6 +114,10 @@ const composerLabel = document.getElementById("composerLabel");
 const composerInput = document.getElementById("composerInput");
 const sendBtn = document.getElementById("sendBtn");
 
+const certifyToggle = document.getElementById("certifyToggle");
+const pdfInput = document.getElementById("pdfInput");
+const attachStatus = document.getElementById("attachStatus");
+
 const connectBtn = document.getElementById("connectBtn");
 const walletStatus = document.getElementById("walletStatus");
 
@@ -106,15 +126,24 @@ function showAddButtons(show){
   if(!addButtons) return;
   addButtons.classList.toggle("hidden", !show);
 }
-
+function showAttachStatus(show, msg=""){
+  if(!attachStatus) return;
+  attachStatus.classList.toggle("hidden", !show);
+  attachStatus.textContent = msg;
+}
 function setCenter(msg){
   centerText.textContent = msg;
 }
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
 
-// ---- Favorites / Contacts ----
-function getFavorites(){ return load(LS_FAVORITES, []); }
-function getContacts(){ return load(LS_CONTACTS, []); }
-
+// ---- Saved lists ----
 function addToList(key, label, address){
   const list = load(key, []);
   list.push({ label, address, ts: Date.now() });
@@ -127,11 +156,7 @@ function renderSavedLists(){
     favoritesList.innerHTML = "";
     const favs = getFavorites();
     if(favs.length === 0){
-      const el = document.createElement("div");
-      el.className = "address";
-      el.style.opacity = "0.6";
-      el.textContent = "—";
-      favoritesList.appendChild(el);
+      favoritesList.innerHTML = `<div class="address" style="opacity:.6">—</div>`;
     } else {
       favs.forEach(item => {
         const el = document.createElement("div");
@@ -147,11 +172,7 @@ function renderSavedLists(){
     contactsList.innerHTML = "";
     const cons = getContacts();
     if(cons.length === 0){
-      const el = document.createElement("div");
-      el.className = "address";
-      el.style.opacity = "0.6";
-      el.textContent = "—";
-      contactsList.appendChild(el);
+      contactsList.innerHTML = `<div class="address" style="opacity:.6">—</div>`;
     } else {
       cons.forEach(item => {
         const el = document.createElement("div");
@@ -169,14 +190,12 @@ async function normalizeRecipient(input){
   const raw = (input || "").trim();
   if(!raw) return { ok:false, reason:"EMPTY" };
 
-  // 0x address
   if(raw.startsWith("0x")){
     const ok = isAddr(raw);
     if(!ok) return { ok:false, reason:"INVALID_ADDRESS" };
     return { ok:true, display: shortAddr(raw), address: raw, ens: null };
   }
 
-  // ENS name
   if(raw.includes(".")){
     try{
       const resolved = await resolveEnsWithFallback(raw);
@@ -191,7 +210,7 @@ async function normalizeRecipient(input){
   return { ok:false, reason:"UNKNOWN_FORMAT" };
 }
 
-// ---- Render functions ----
+// ---- Render right-rail addresses ----
 function renderAddresses(){
   addressList.innerHTML = "";
   ADDRESSES.forEach(addr => {
@@ -203,15 +222,63 @@ function renderAddresses(){
   });
 }
 
+// ---- Inbox + Requests ----
+function ensureUnlockedFromSession(){
+  const sess = load(LS_SESSION, null);
+  if(!sess || !sess.addr || !sess.exp) return false;
+  if(Date.now() > sess.exp) return false;
+  if(myAddress && normAddr(sess.addr) !== normAddr(myAddress)) return false;
+  return true;
+}
+
+function setUnlockedUI(){
+  state.inboxUnlocked = ensureUnlockedFromSession();
+  if(unlockBtn){
+    unlockBtn.textContent = state.inboxUnlocked ? "INBOX UNLOCKED" : "UNLOCK INBOX (SIGN ONCE)";
+    unlockBtn.disabled = state.inboxUnlocked;
+    unlockBtn.style.opacity = state.inboxUnlocked ? "0.6" : "1";
+  }
+}
+
 function renderInbox(){
-  const inbox = load(LS_INBOX, []);
+  setUnlockedUI();
+
+  // If locked, don't show content
+  if(!state.inboxUnlocked){
+    if(requestItems) requestItems.innerHTML = `<div class="inbox-item"><div class="title">LOCKED</div></div>`;
+    inboxItems.innerHTML = `<div class="inbox-item"><div class="title">UNLOCK TO VIEW</div></div>`;
+    return;
+  }
+
+  // Requests
+  if(requestItems){
+    const reqs = getRequests().filter(r => !isBlocked(r.from));
+    requestItems.innerHTML = "";
+    if(reqs.length === 0){
+      requestItems.innerHTML = `<div class="inbox-item"><div class="title">—</div></div>`;
+    } else {
+      reqs.forEach(r => {
+        const el = document.createElement("div");
+        el.className = "inbox-item";
+        el.innerHTML = `
+          <div class="from">FROM: ${escapeHtml(String(r.from)).toUpperCase()}</div>
+          <div class="title">REQUEST</div>
+          <div class="row-actions">
+            <button class="mini-btn" data-act="accept" data-id="${r.id}">ACCEPT</button>
+            <button class="mini-btn" data-act="block" data-id="${r.id}">BLOCK</button>
+          </div>
+        `;
+        requestItems.appendChild(el);
+      });
+    }
+  }
+
+  // Messages
+  const inbox = load(LS_INBOX, []).filter(m => !isBlocked(m.from));
   inboxItems.innerHTML = "";
 
   if(inbox.length === 0){
-    const empty = document.createElement("div");
-    empty.className = "inbox-item";
-    empty.innerHTML = `<div class="title">NO NEW MESSAGES</div>`;
-    inboxItems.appendChild(empty);
+    inboxItems.innerHTML = `<div class="inbox-item"><div class="title">NO NEW MESSAGES</div></div>`;
     return;
   }
 
@@ -219,11 +286,61 @@ function renderInbox(){
     const el = document.createElement("div");
     el.className = "inbox-item";
     el.innerHTML = `
-      <div class="from">FROM: ${String(item.from).toUpperCase()}</div>
-      <div class="title">NEW MESSAGE</div>
+      <div class="from">FROM: ${escapeHtml(String(item.from)).toUpperCase()}</div>
+      <div class="title">${item.certified ? "CERTIFIED MESSAGE" : "NEW MESSAGE"}</div>
     `;
     el.onclick = () => openThread(item.threadId);
     inboxItems.appendChild(el);
+  });
+}
+
+function acceptRequest(requestId){
+  const reqs = getRequests();
+  const r = reqs.find(x => x.id === requestId);
+  if(!r) return;
+
+  // add to contacts
+  const label = r.ens || shortAddr(r.from);
+  addToList(LS_CONTACTS, label, r.from);
+
+  // move request -> inbox
+  const inbox = load(LS_INBOX, []);
+  inbox.unshift({ threadId: r.threadId, from: r.from, ts: Date.now(), certified: !!r.certified });
+  save(LS_INBOX, inbox);
+
+  // remove request
+  save(LS_REQUESTS, reqs.filter(x => x.id !== requestId));
+  renderInbox();
+}
+
+function blockRequest(requestId){
+  const reqs = getRequests();
+  const r = reqs.find(x => x.id === requestId);
+  if(!r) return;
+
+  // add to blocked
+  const blocked = load(LS_BLOCKED, []);
+  blocked.push({ address: r.from, ts: Date.now() });
+  save(LS_BLOCKED, uniqByAddress(blocked));
+
+  // remove request
+  save(LS_REQUESTS, reqs.filter(x => x.id !== requestId));
+
+  // remove any inbox items from them
+  const inbox = load(LS_INBOX, []);
+  save(LS_INBOX, inbox.filter(m => normAddr(m.from) !== normAddr(r.from)));
+
+  renderInbox();
+}
+
+if(requestItems){
+  requestItems.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if(!btn) return;
+    const id = btn.getAttribute("data-id");
+    const act = btn.getAttribute("data-act");
+    if(act === "accept") acceptRequest(id);
+    if(act === "block") blockRequest(id);
   });
 }
 
@@ -233,8 +350,9 @@ async function openComposer(toAddress){
   state.activeTo = toAddress;
   state.activeToResolved = null;
   state.activeThreadId = null;
+  state.pendingPdf = null;
+  showAttachStatus(false);
 
-  // ALWAYS hide first
   showAddButtons(false);
 
   setCenter(
@@ -245,7 +363,6 @@ async function openComposer(toAddress){
 
   let resolved = null;
 
-  // Resolve ENS via fallback RPCs
   if(String(toAddress).includes(".")){
     resolved = await resolveEnsWithFallback(toAddress);
   } else if(String(toAddress).startsWith("0x") && isAddr(toAddress)){
@@ -260,7 +377,6 @@ async function openComposer(toAddress){
     `TYPE YOUR MESSAGE BELOW.`
   );
 
-  // Only show when resolved is a valid address
   showAddButtons(!!resolved && isAddr(resolved));
 
   composerLabel.textContent = "SEND";
@@ -271,6 +387,7 @@ async function openComposer(toAddress){
 }
 
 function openThread(threadId){
+  // remove from inbox on open
   const inbox = load(LS_INBOX, []);
   save(LS_INBOX, inbox.filter(m => m.threadId !== threadId));
 
@@ -278,6 +395,8 @@ function openThread(threadId){
   state.activeThreadId = threadId;
 
   showAddButtons(false);
+  showAttachStatus(false);
+  state.pendingPdf = null;
 
   const threads = load(LS_THREADS, {});
   const thread = threads[threadId];
@@ -287,17 +406,34 @@ function openThread(threadId){
   }
 
   const last = thread.messages[thread.messages.length - 1];
-  setCenter(
-    `FROM: ${String(last.from).toUpperCase()}\n` +
-    `TO: ${String(last.to).toUpperCase()}\n\n` +
-    `${last.body}\n`
-  );
+  const lines = [];
+  lines.push(`FROM: ${String(last.from).toUpperCase()}`);
+  lines.push(`TO: ${String(last.to).toUpperCase()}`);
+  if(last.certified) lines.push(`CERTIFIED: YES`);
+  lines.push("");
+  lines.push(String(last.body || ""));
+
+  if(last.pdf && last.pdf.name){
+    lines.push("");
+    lines.push(`[PDF ATTACHED] ${last.pdf.name}`);
+    lines.push(`(OPEN: click the attachment status below)`);
+    showAttachStatus(true, `OPEN PDF: ${last.pdf.name}`);
+    attachStatus.onclick = () => {
+      window.open(last.pdf.dataUrl, "_blank");
+    };
+  } else {
+    attachStatus.onclick = null;
+  }
+
+  setCenter(lines.join("\n"));
 
   composerLabel.textContent = "REPLY";
   composerInput.value = "";
   composerInput.placeholder = "";
   sendBtn.textContent = "SEND";
   composerInput.focus();
+
+  renderInbox();
 }
 
 function send(){
@@ -309,6 +445,10 @@ function send(){
     return;
   }
 
+  const certified = !!(certifyToggle && certifyToggle.checked);
+  const pdf = state.pendingPdf ? { ...state.pendingPdf } : null;
+
+  // Compose: create new thread
   if(state.mode === "compose"){
     const threadId = uid();
     const toTarget = state.activeToResolved || state.activeTo;
@@ -322,54 +462,80 @@ function send(){
         from: myAddress,
         to: toTarget,
         body,
-        ts: Date.now()
+        ts: Date.now(),
+        certified,
+        pdf
       }]
     };
     save(LS_THREADS, threads);
 
-    const inbox = load(LS_INBOX, []);
-    inbox.unshift({ threadId, from: myAddress, ts: Date.now() });
-    save(LS_INBOX, inbox);
+    // Simulate inbound routing:
+    // - If sender not in contacts => goes to Requests
+    // - If in contacts => goes to inbox
+    const fromMe = myAddress;
+    if(isKnownContact(fromMe)){
+      const inbox = load(LS_INBOX, []);
+      inbox.unshift({ threadId, from: myAddress, ts: Date.now(), certified });
+      save(LS_INBOX, inbox);
+    } else {
+      const reqs = load(LS_REQUESTS, []);
+      reqs.unshift({ id: uid(), threadId, from: myAddress, ens: null, ts: Date.now(), certified });
+      save(LS_REQUESTS, reqs);
+    }
 
     setCenter(
       `TO: ${String(toTarget).toUpperCase()}\n` +
-      (state.activeToResolved && String(state.activeTo).includes(".")
-        ? `ENS: ${String(state.activeTo).toUpperCase()}\n\n`
-        : `\n`) +
-      `${body}\n\n[SENT]`
+      (state.activeToResolved && String(state.activeTo).includes(".") ? `ENS: ${String(state.activeTo).toUpperCase()}\n` : ``) +
+      (certified ? `CERTIFIED: YES\n` : ``) +
+      (pdf ? `PDF: ${pdf.name}\n` : ``) +
+      `\n${body}\n\n[SENT]`
     );
 
     composerInput.value = "";
+    state.pendingPdf = null;
+    showAttachStatus(false);
+    if(pdfInput) pdfInput.value = "";
+
     renderInbox();
     return;
   }
 
+  // Thread reply
   if(state.mode === "thread"){
     const threads = load(LS_THREADS, {});
     const thread = threads[state.activeThreadId];
     if(!thread) return;
 
-    const other = thread.participants.find(p => p !== myAddress) || "unknown";
+    const other = thread.participants.find(p => normAddr(p) !== normAddr(myAddress)) || "unknown";
 
     thread.messages.push({
       id: uid(),
       from: myAddress,
       to: other,
       body,
-      ts: Date.now()
+      ts: Date.now(),
+      certified,
+      pdf
     });
     save(LS_THREADS, threads);
 
+    // Simulate inbox item
     const inbox = load(LS_INBOX, []);
-    inbox.unshift({ threadId: thread.threadId, from: myAddress, ts: Date.now() });
+    inbox.unshift({ threadId: thread.threadId, from: myAddress, ts: Date.now(), certified });
     save(LS_INBOX, inbox);
 
     setCenter(
-      `TO: ${String(other).toUpperCase()}\n\n` +
-      `${body}\n\n[SENT REPLY]`
+      `TO: ${String(other).toUpperCase()}\n` +
+      (certified ? `CERTIFIED: YES\n` : ``) +
+      (pdf ? `PDF: ${pdf.name}\n` : ``) +
+      `\n${body}\n\n[SENT REPLY]`
     );
 
     composerInput.value = "";
+    state.pendingPdf = null;
+    showAttachStatus(false);
+    if(pdfInput) pdfInput.value = "";
+
     renderInbox();
   }
 }
@@ -381,6 +547,7 @@ inboxBtn.onclick = () => {
   renderInbox();
 };
 
+// Close dropdown if click elsewhere
 document.addEventListener("click", (e) => {
   const clickedInside = e.target.closest(".inbox");
   if(!clickedInside && state.inboxOpen){
@@ -463,6 +630,87 @@ if(addContactBtn){
   };
 }
 
+// ---- Unlock Inbox (sign once) ----
+async function unlockInbox(){
+  if(!window.ethereum){
+    setCenter("METAMASK NOT FOUND. INSTALL METAMASK EXTENSION.");
+    return;
+  }
+  if(!myAddress){
+    setCenter("CONNECT WALLET FIRST.");
+    return;
+  }
+
+  try{
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+
+    const nonce = uid();
+    const msg =
+`NOVAGRAM UNLOCK REQUEST
+ADDRESS: ${myAddress}
+NONCE: ${nonce}
+TIME: ${new Date().toISOString()}`;
+
+    const sig = await signer.signMessage(msg);
+
+    // Local demo session: 12 hours
+    save(LS_SESSION, {
+      addr: myAddress,
+      sig,
+      msg,
+      exp: Date.now() + 12 * 60 * 60 * 1000
+    });
+
+    setCenter("INBOX UNLOCKED.\n\nOPEN THE INBOX.");
+    renderInbox();
+  } catch (e){
+    setCenter("SIGNATURE CANCELLED.");
+  }
+}
+
+if(unlockBtn){
+  unlockBtn.onclick = unlockInbox;
+}
+
+// ---- PDF attachment ----
+async function fileToDataUrl(file){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+if(pdfInput){
+  pdfInput.addEventListener("change", async () => {
+    const file = pdfInput.files && pdfInput.files[0];
+    if(!file){
+      state.pendingPdf = null;
+      showAttachStatus(false);
+      return;
+    }
+    if(file.type !== "application/pdf"){
+      state.pendingPdf = null;
+      pdfInput.value = "";
+      showAttachStatus(true, "PDF ONLY.");
+      return;
+    }
+    if(file.size > 5 * 1024 * 1024){
+      state.pendingPdf = null;
+      pdfInput.value = "";
+      showAttachStatus(true, "PDF TOO LARGE (MAX 5MB FOR DEMO).");
+      return;
+    }
+
+    const dataUrl = await fileToDataUrl(file);
+    state.pendingPdf = { name: file.name, size: file.size, mime: file.type, dataUrl };
+    showAttachStatus(true, `ATTACHED: ${file.name}`);
+    attachStatus.onclick = () => window.open(dataUrl, "_blank");
+  });
+}
+
 // ---- Wallet connect ----
 async function connectWallet(){
   if(!window.ethereum){
@@ -478,24 +726,25 @@ async function connectWallet(){
     window.ethereum.on("accountsChanged", (accs) => {
       myAddress = accs?.[0] || null;
       walletStatus.textContent = myAddress || "NOT CONNECTED";
+      renderInbox();
     });
 
-    setCenter("WALLET CONNECTED.\n\nSELECT AN ADDRESS OR OPEN INBOX.");
+    setCenter("WALLET CONNECTED.\n\nOPEN INBOX → UNLOCK (SIGN ONCE).");
+    renderInbox();
   } catch (e){
     setCenter("WALLET CONNECTION CANCELLED.");
   }
 }
-
 connectBtn.onclick = connectWallet;
 
 // ---- Init ----
 showAddButtons(false);
 renderAddresses();
-renderInbox();
 renderSavedLists();
+renderInbox();
 openComposer("neo.eth");
 
-// Optional: simple canvas flicker so it doesn't feel dead
+// Optional: subtle scanlines background
 (function subtleBG(){
   const c = document.getElementById("bg");
   const ctx = c.getContext("2d");
@@ -519,6 +768,7 @@ openComposer("neo.eth");
   }
   loop();
 })();
+
 // ===========================
 // RETRO WIREFRAME GLOBE (CANVAS)
 // ===========================
@@ -529,7 +779,6 @@ openComposer("neo.eth");
   const ctx = canvas.getContext("2d");
 
   function resize(){
-    // Match CSS pixels for crispness
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width  = Math.floor(rect.width * dpr);
@@ -539,12 +788,10 @@ openComposer("neo.eth");
   window.addEventListener("resize", resize);
   resize();
 
-  // Sphere + grid settings
-  const R = 95;                 // globe radius (in CSS px)
+  const R = 95;
   const cx = () => canvas.getBoundingClientRect().width / 2;
   const cy = () => canvas.getBoundingClientRect().height / 2;
 
-  // Simple rotation helpers
   function rotY(p, a){
     const s = Math.sin(a), c = Math.cos(a);
     return { x: p.x*c + p.z*s, y: p.y, z: -p.x*s + p.z*c };
@@ -553,15 +800,11 @@ openComposer("neo.eth");
     const s = Math.sin(a), c = Math.cos(a);
     return { x: p.x, y: p.y*c - p.z*s, z: p.y*s + p.z*c };
   }
-
-  // Perspective projection
   function project(p){
-    const depth = 260; // camera distance
+    const depth = 260;
     const scale = depth / (depth + p.z);
-    return { x: cx() + p.x * scale, y: cy() + p.y * scale, s: scale };
+    return { x: cx() + p.x * scale, y: cy() + p.y * scale };
   }
-
-  // Draw a polyline with depth shading
   function drawPath(points, color){
     ctx.beginPath();
     for(let i=0;i<points.length;i++){
@@ -574,32 +817,23 @@ openComposer("neo.eth");
   }
 
   let t = 0;
-
   function frame(){
     const w = canvas.getBoundingClientRect().width;
     const h = canvas.getBoundingClientRect().height;
-
     ctx.clearRect(0,0,w,h);
 
-    // Subtle glow background
     ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.fillRect(0,0,w,h);
 
-    // Globe outline glow
-    ctx.lineWidth = 1;
-
-    // Rotation angles
     t += 0.012;
-    const ay = t;          // spin around vertical axis
-    const ax = -0.35;      // tilt
+    const ay = t;
+    const ax = -0.35;
 
-    // Choose 3 retro colors (green, blue, red) for “bands”
     const cGreen = "rgba(57,255,20,0.75)";
     const cBlue  = "rgba(80,160,255,0.55)";
     const cRed   = "rgba(255,80,120,0.45)";
     const cDim   = "rgba(57,255,20,0.18)";
 
-    // Draw latitude rings
     for(let lat = -60; lat <= 60; lat += 20){
       const pts = [];
       const phi = (lat * Math.PI) / 180;
@@ -614,13 +848,11 @@ openComposer("neo.eth");
         pts.push(p);
       }
 
-      // Color some bands
       const bandColor = (lat === 0) ? cGreen : (lat === 20 || lat === -20) ? cBlue : cRed;
       ctx.lineWidth = 1;
       drawPath(pts, bandColor);
     }
 
-    // Draw longitude arcs
     for(let lon = 0; lon < 180; lon += 20){
       const pts = [];
       const th0 = (lon * Math.PI) / 180;
@@ -641,7 +873,6 @@ openComposer("neo.eth");
       drawPath(pts, cDim);
     }
 
-    // Outer sphere outline (a faint ring)
     ctx.beginPath();
     ctx.arc(w/2, h/2, R, 0, Math.PI*2);
     ctx.strokeStyle = "rgba(57,255,20,0.20)";
@@ -650,6 +881,5 @@ openComposer("neo.eth");
 
     requestAnimationFrame(frame);
   }
-
   requestAnimationFrame(frame);
 })();
