@@ -289,24 +289,44 @@ html, body{
   gap:16px;
 }
 
-/* Retro globe container (above message) */
+/* Retro globe — FLOATING (no box), glows by itself */
 .signal{
-  position:relative;
-  width:240px;
-  height:240px;
-  margin:0 auto 14px auto;
-  border:1px solid rgba(57,255,20,0.22);
-  border-radius:14px;
-  box-shadow: 0 0 18px rgba(57,255,20,0.12);
-  background: rgba(0,0,0,0.25);
-  overflow:hidden;
+  position: fixed;                 /* pull it out as a background element */
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 260px;
+
+  /* remove the square */
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+
+  pointer-events: none;            /* clicks pass through */
+  z-index: 1;                      /* behind your UI */
 }
 
-#globe{
-  width:100%;
-  height:100%;
-  display:block;
+/* keep UI above it */
+.center{
+  position: relative;
+  z-index: 2;
 }
+
+/* glow comes from the canvas pixels */
+#globe{
+  width: 100%;
+  height: 100%;
+  display: block;
+
+  /* glow */
+  filter:
+    drop-shadow(0 0 10px rgba(57,255,20,0.25))
+    drop-shadow(0 0 26px rgba(57,255,20,0.18));
+}
+
 
 .center-text{
   max-width:780px;
