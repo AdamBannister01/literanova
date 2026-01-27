@@ -379,7 +379,7 @@ async function openComposer(toAddress){
 
   showAddButtons(!!resolved && isAddr(resolved));
 
-  composerLabel.textContent = "SEND";
+  composerLabel.textContent = "SEND NEW MESSAGE";
   composerInput.value = "";
   composerInput.placeholder = "";
   sendBtn.textContent = "SEND";
@@ -427,7 +427,7 @@ function openThread(threadId){
 
   setCenter(lines.join("\n"));
 
-  composerLabel.textContent = "REPLY";
+  composerLabel.textContent = "REPLY TO MESSAGE";
   composerInput.value = "";
   composerInput.placeholder = "";
   sendBtn.textContent = "SEND";
@@ -595,7 +595,7 @@ async function handleToGo(){
 
   showAddButtons(!!result.address && isAddr(result.address));
 
-  composerLabel.textContent = "SEND";
+  composerLabel.textContent = "SEND NEW MESSAGE";
   composerInput.value = "";
   sendBtn.textContent = "SEND";
   composerInput.focus();
