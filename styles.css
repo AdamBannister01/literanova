@@ -397,9 +397,8 @@ html, body{
 
 .composer-row{
   display:grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 180px minmax(0, 1fr) 140px;
   align-items:center;
-  gap:12px;
   width:100%;
   max-width:900px;
 }
