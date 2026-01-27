@@ -1,370 +1,87 @@
-/* ----- Base ----- */
-:root{
-  --bg: #020402;
-  --green: #39ff14;
-  --green2: rgba(57,255,20,0.35);
-  --muted: rgba(57,255,20,0.7);
-}
-
-*{ box-sizing:border-box; }
-html, body{
-  height:100%;
-  margin:0;
-  background: var(--bg);
-  color: var(--green);
-  font-family: "VT323", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  overflow:hidden;
-}
-
-#bg{
-  position:fixed;
-  inset:0;
-  width:100%;
-  height:100%;
-  z-index:0;
-  opacity:0.12; /* keep subtle for now */
-}
-
-/* ----- Top-left ----- */
-.top-left{
-  position:fixed;
-  top:18px;
-  left:18px;
-  z-index:5;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.brand{
-  font-weight:900;
-  font-size:32px;              /* or whatever size you want */
-  letter-spacing:0.20em;       /* was 0.16em */
-  padding-right:0.20em;        /* ✅ gives the last "M" room */
-  text-transform:uppercase;
-  transform: skewX(-10deg);
-  transform-origin: left center;
-  text-shadow: 0 0 18px rgba(57,255,20,0.45);
-}
-
-
-.inbox{
-  position:relative;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.wallet{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  max-width:260px;
-}
-
-.wallet-status{
-  font-size:12px;
-  color: rgba(57,255,20,0.7);
-  word-break: break-all;
-}
-
-.icon-btn{
-  background:transparent;
-  border:1px solid var(--green2);
-  color:var(--green);
-  padding:8px 10px;
-  cursor:pointer;
-  border-radius:6px;
-  text-shadow: 0 0 10px var(--green2);
-}
-.icon-btn:hover{
-  border-color: var(--green);
-}
-
-/* Dropdown */
-.dropdown{
-  position:absolute;
-  top:42px;
-  left:0;
-  width:260px;
-  border:1px solid var(--green2);
-  background: rgba(0,0,0,0.85);
-  border-radius:10px;
-  padding:10px;
-  box-shadow: 0 0 18px rgba(57,255,20,0.15);
-}
-.hidden{ display:none !important; }
-.dropdown-title{
-  font-weight:700;
-  letter-spacing:0.08em;
-  margin-bottom:8px;
-  color:var(--muted);
-}
-.dropdown-items{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.inbox-item{
-  padding:8px;
-  border:1px solid rgba(57,255,20,0.18);
-  border-radius:8px;
-  cursor:pointer;
-}
-.inbox-item:hover{
-  border-color: var(--green);
-}
-.inbox-item .from{
-  color: var(--muted);
-  font-size:12px;
-  margin-bottom:2px;
-}
-.inbox-item .title{
-  font-size:13px;
-}
-
-/* ----- Right rail ----- */
-.right-rail{
-  position:fixed;
-  top:18px;
-  right:18px;
-  z-index:5;
-  width:320px;
-  border:1px solid rgba(57,255,20,0.12);
-  background: rgba(0,0,0,0.35);
-  border-radius:12px;
-  padding:12px;
-}
-
-.to-box{
-  display:grid;
-  grid-template-columns: 34px 1fr 44px;
-  gap:8px;
-  align-items:center;
-  margin-bottom:10px;
-}
-
-.to-label{
-  color: var(--muted);
-  font-weight:700;
-  letter-spacing:0.08em;
-  font-size:12px;
-}
-
-.to-input{
-  flex:1;
-  background: rgba(0,0,0,0.55);
-  border:1px solid rgba(57,255,20,0.18);
-  color: var(--green);
-  border-radius:10px;
-  padding:8px 10px;
-  outline:none;
-  font-size:14px;
-}
-.to-input:focus{
-  border-color: var(--green);
-}
-
-.to-btn{
-  background:transparent;
-  border:1px solid var(--green2);
-  color:var(--green);
-  padding:8px 8px;
-  border-radius:10px;
-  cursor:pointer;
-  letter-spacing:0.08em;
-}
-.to-btn:hover{
-  border-color: var(--green);
-}
-
-/* ✅ New section labels for Favorites/Contacts/All */
-.section-title{
-  color: var(--muted);
+/* Inbox dropdown sections + action button */
+.dropdown-subtitle{
+  color: rgba(57,255,20,0.55);
   font-weight:700;
   letter-spacing:0.08em;
   font-size:12px;
   margin:10px 0 6px 0;
 }
-
-.rail-divider{
-  height:1px;
-  background: rgba(57,255,20,0.2);
-  margin:10px 0 12px 0;
-}
-
-.rail-title{
-  color: var(--muted);
-  font-weight:700;
-  letter-spacing:0.08em;
-  margin-bottom:10px;
-}
-
-.address-list{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-/* ✅ Smaller cards for Favorites/Contacts */
-.address-list.small .address{
-  padding:7px 8px;
-  font-size:12px;
-  border-radius:10px;
-}
-
-.address{
-  border:1px solid rgba(57,255,20,0.18);
-  padding:8px;
-  border-radius:10px;
-  cursor:pointer;
-  font-size:13px;
-}
-.address:hover{
-  border-color: var(--green);
-}
-
-/* ----- Center ----- */
-.center{
-  position:relative;
-  z-index:2;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
-  text-align:center;
-  gap:16px; /* slightly tighter */
-}
-
-/* ✅ Constant animation centered between top and message area */
-/* ✅ Retro spinning globe container (ALWAYS above message area) */
-.signal{
-  position: relative;        /* NOT fixed */
-  width: 240px;
-  height: 240px;
-  margin: 0 auto 14px auto;  /* pushes text BELOW it */
-  border:1px solid rgba(57,255,20,0.22);
-  border-radius:14px;
-  box-shadow: 0 0 18px rgba(57,255,20,0.12);
-  background: rgba(0,0,0,0.25);
-  overflow:hidden;
-}
-#globe{
-  width:100%;
-  height:100%;
-  display:block;
-}
-
-
-.center{
-  position:relative;
-  z-index:2;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-
-  justify-content:flex-start;  /* was center */
-  padding-top: 110px;          /* creates breathing room below header */
-  padding-left:24px;
-  padding-right:24px;
-  text-align:center;
-  gap:16px;
-}
-
-
-/* ✅ Add-to buttons area */
-.add-buttons{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  width:320px;
-}
-.action-btn{
+.dropdown-action{
   width:100%;
   background:transparent;
-  border:1px solid var(--green2);
+  border:1px solid rgba(57,255,20,0.22);
   color:var(--green);
-  padding:10px 12px;
+  padding:8px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  letter-spacing:0.08em;
+  margin-bottom:8px;
+}
+.dropdown-action:hover{ border-color: var(--green); }
+
+/* Request item mini buttons */
+.row-actions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+}
+.mini-btn{
+  flex:1;
+  background:transparent;
+  border:1px solid rgba(57,255,20,0.22);
+  color:var(--green);
+  padding:6px 8px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:12px;
+  letter-spacing:0.06em;
+}
+.mini-btn:hover{ border-color: var(--green); }
+
+/* Composer tools row (toggle + attach) */
+.composer-tools{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  margin-top:6px;
+}
+.toggle{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  color: rgba(57,255,20,0.85);
+  border:1px solid rgba(57,255,20,0.18);
+  padding:8px 10px;
+  border-radius:12px;
+  cursor:pointer;
+  user-select:none;
+}
+.toggle input{ accent-color: #39ff14; }
+
+.attach-btn{
+  position:relative;
+  overflow:hidden;
+  border:1px solid rgba(57,255,20,0.18);
+  padding:8px 10px;
   border-radius:12px;
   cursor:pointer;
   letter-spacing:0.08em;
-  text-shadow: 0 0 10px rgba(57,255,20,0.12);
 }
-.action-btn:hover{
-  border-color: var(--green);
-}
-
-/* ----- Composer line ----- */
-.composer{
-  width:100%;
-  display:flex;
-  justify-content:center;
-}
-
-.composer-row{
-  display:flex;
-  align-items:center;
-  gap:8px;         /* ✅ closer spacing */
-  width:100%;
-  max-width:900px;
-}
-
-.label{
-  width:56px;      /* ✅ brings REPLY/SEND closer to line */
-  text-align:left;
-  color: var(--muted);
-  letter-spacing:0.08em;
-}
-
-.line-wrap{
-  flex:1;
-  position:relative;
-
-  /* ✅ Message line slightly longer (was 25%) */
-  padding-left: 22%;
-  padding-right: 22%;
-}
-
-.line{
+.attach-btn input{
   position:absolute;
-  left:22%;
-  right:22%;
-  bottom:4px;
-  height:1px;
-  background: rgba(57,255,20,0.55);
-  box-shadow: 0 0 12px rgba(57,255,20,0.15);
-}
-
-.line-input{
-  width:100%;
-  background:transparent;
-  border:none;
-  outline:none;
-  color: var(--green);
-  font-size:16px;
-  padding:10px 0 6px 0;
-  text-shadow: 0 0 10px var(--green2);
-}
-
-.send-btn{
-  background:transparent;
-  border:1px solid var(--green2);
-  color:var(--green);
-  padding:9px 10px; /* ✅ closer */
-  border-radius:10px;
+  inset:0;
+  opacity:0;
   cursor:pointer;
-  letter-spacing:0.08em;
-}
-.send-btn:hover{
-  border-color: var(--green);
 }
 
-/* Small screens */
-@media (max-width: 900px){
-  .right-rail{ display:none; }
-  .line-wrap{ padding-left: 10%; padding-right: 10%; }
-  .line{ left:10%; right:10%; }
+.attach-status{
+  margin-top:10px;
+  color: rgba(57,255,20,0.75);
+  border:1px dashed rgba(57,255,20,0.22);
+  padding:8px 10px;
+  border-radius:12px;
+  cursor:pointer;
 }
+.attach-status.hidden{ display:none !important; }
