@@ -557,6 +557,11 @@ document.addEventListener("click", (e) => {
 });
 
 // Enter key sends
+composerInput.addEventListener("input", () => {
+  composerInput.style.height = "auto";
+  composerInput.style.height = composerInput.scrollHeight + "px";
+});
+
 composerInput.addEventListener("keydown", (e) => {
   if(e.key === "Enter"){
     e.preventDefault();
