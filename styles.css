@@ -396,31 +396,34 @@ html, body{
 }
 
 .composer-row{
-  display:flex;
+  display:grid;
+  grid-template-columns: auto 1fr auto;
   align-items:center;
-  gap:8px;
+  gap:12px;
   width:100%;
   max-width:900px;
 }
 
+/* Left text label */
 .label{
-  width:56px;
-  text-align:left;
+  min-width:160px;
+  text-align:right;
   color: var(--muted);
   letter-spacing:0.08em;
+  font-size:14px;
+  padding-right:6px;
 }
 
+/* Input area */
 .line-wrap{
-  flex:1;
   position:relative;
-  padding-left:22%;
-  padding-right:22%;
+  width:100%;
 }
 
 .line{
   position:absolute;
-  left:22%;
-  right:22%;
+  left:0;
+  right:0;
   bottom:4px;
   height:1px;
   background: rgba(57,255,20,0.55);
@@ -438,11 +441,12 @@ html, body{
   text-shadow: 0 0 10px var(--green2);
 }
 
+/* Send button closer to line */
 .send-btn{
   background:transparent;
   border:1px solid var(--green2);
   color:var(--green);
-  padding:9px 10px;
+  padding:8px 12px;
   border-radius:10px;
   cursor:pointer;
   letter-spacing:0.08em;
