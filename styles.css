@@ -281,7 +281,7 @@ html, body{
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:flex-start;  /* important: keeps globe above message area */
+  justify-content:flex-start;  /* keeps globe above message area */
   padding-top:110px;          /* breathing room below header */
   padding-left:24px;
   padding-right:24px;
@@ -399,13 +399,13 @@ html, body{
   display:grid;
   grid-template-columns: 180px minmax(0, 1fr) 140px;
   align-items:center;
+  gap:12px;                 /* ✅ keeps send button close but not touching */
   width:100%;
   max-width:900px;
 }
 
 /* Left text label */
 .label{
-  min-width:160px;
   text-align:right;
   color: var(--muted);
   letter-spacing:0.08em;
@@ -438,13 +438,14 @@ html, body{
   font-size:16px;
   padding:10px 0 6px 0;
   resize:none;
-  overflow:hidden;
+  overflow:hidden;          /* needed for auto-grow */
   line-height:1.4;
   text-shadow: 0 0 10px var(--green2);
 }
 
-/* Send button closer to line */
+/* Send button */
 .send-btn{
+  justify-self:left;        /* ✅ keeps it close to the input */
   background:transparent;
   border:1px solid var(--green2);
   color:var(--green);
@@ -460,6 +461,14 @@ html, body{
 /* Small screens */
 @media (max-width: 900px){
   .right-rail{ display:none; }
-  .line-wrap{ padding-left: 10%; padding-right: 10%; }
-  .line{ left:10%; right:10%; }
+
+  /* ✅ keep centered; just shrink columns */
+  .composer-row{
+    grid-template-columns: 140px minmax(0, 1fr) 110px;
+    gap:10px;
+  }
+
+  .label{
+    font-size:13px;
+  }
 }
