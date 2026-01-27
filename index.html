@@ -28,6 +28,17 @@
 
       <div id="inboxMenu" class="dropdown hidden">
         <div class="dropdown-title">INBOX</div>
+
+<button id="unlockBtn" class="dropdown-action">
+  UNLOCK INBOX (SIGN ONCE)
+</button>
+
+<div class="dropdown-subtitle">REQUESTS</div>
+<div id="requestItems" class="dropdown-items"></div>
+
+<div class="dropdown-subtitle">MESSAGES</div>
+<div id="inboxItems" class="dropdown-items"></div>
+        <div class="dropdown-title">INBOX</div>
         <div id="inboxItems" class="dropdown-items"></div>
       </div>
     </div>
@@ -78,6 +89,20 @@
     </div>
 
     <!-- Compose / reply area -->
+    <div class="composer-tools">
+  <label class="toggle">
+    <input id="certifyToggle" type="checkbox" />
+    <span>CERTIFY (NFT)</span>
+  </label>
+
+  <label class="attach-btn">
+    <input id="pdfInput" type="file" accept="application/pdf" />
+    ATTACH PDF
+  </label>
+
+  <div id="attachStatus" class="attach-status hidden"></div>
+</div>
+
     <div id="composer" class="composer">
       <div class="composer-row">
         <span id="composerLabel" class="label">SEND</span>
