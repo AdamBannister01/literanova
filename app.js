@@ -243,7 +243,6 @@ function setUnlockedUI(){
 function renderInbox(){
   setUnlockedUI();
 
-  // If locked, don't show content
   if(!state.inboxUnlocked){
     if(requestItems) requestItems.innerHTML = `<div class="inbox-item"><div class="title">LOCKED</div></div>`;
     inboxItems.innerHTML = `<div class="inbox-item"><div class="title">UNLOCK TO VIEW</div></div>`;
@@ -299,16 +298,13 @@ function acceptRequest(requestId){
   const r = reqs.find(x => x.id === requestId);
   if(!r) return;
 
-  // add to contacts
   const label = r.ens || shortAddr(r.from);
   addToList(LS_CONTACTS, label, r.from);
 
-  // move request -> inbox
   const inbox = load(LS_INBOX, []);
   inbox.unshift({ threadId: r.threadId, from: r.from, ts: Date.now(), certified: !!r.certified });
   save(LS_INBOX, inbox);
 
-  // remove request
   save(LS_REQUESTS, reqs.filter(x => x.id !== requestId));
   renderInbox();
 }
@@ -318,15 +314,12 @@ function blockRequest(requestId){
   const r = reqs.find(x => x.id === requestId);
   if(!r) return;
 
-  // add to blocked
   const blocked = load(LS_BLOCKED, []);
   blocked.push({ address: r.from, ts: Date.now() });
   save(LS_BLOCKED, uniqByAddress(blocked));
 
-  // remove request
   save(LS_REQUESTS, reqs.filter(x => x.id !== requestId));
 
-  // remove any inbox items from them
   const inbox = load(LS_INBOX, []);
   save(LS_INBOX, inbox.filter(m => normAddr(m.from) !== normAddr(r.from)));
 
@@ -345,6 +338,12 @@ if(requestItems){
 }
 
 // ---- Composer / Threads ----
+function resetComposerHeight(){
+  if(!composerInput) return;
+  composerInput.style.height = "auto";
+  composerInput.style.height = composerInput.scrollHeight + "px";
+}
+
 async function openComposer(toAddress){
   state.mode = "compose";
   state.activeTo = toAddress;
@@ -381,13 +380,12 @@ async function openComposer(toAddress){
 
   composerLabel.textContent = "SEND NEW MESSAGE";
   composerInput.value = "";
-  composerInput.placeholder = "";
+  resetComposerHeight();
   sendBtn.textContent = "SEND";
   composerInput.focus();
 }
 
 function openThread(threadId){
-  // remove from inbox on open
   const inbox = load(LS_INBOX, []);
   save(LS_INBOX, inbox.filter(m => m.threadId !== threadId));
 
@@ -418,9 +416,7 @@ function openThread(threadId){
     lines.push(`[PDF ATTACHED] ${last.pdf.name}`);
     lines.push(`(OPEN: click the attachment status below)`);
     showAttachStatus(true, `OPEN PDF: ${last.pdf.name}`);
-    attachStatus.onclick = () => {
-      window.open(last.pdf.dataUrl, "_blank");
-    };
+    attachStatus.onclick = () => window.open(last.pdf.dataUrl, "_blank");
   } else {
     attachStatus.onclick = null;
   }
@@ -429,7 +425,7 @@ function openThread(threadId){
 
   composerLabel.textContent = "REPLY TO MESSAGE";
   composerInput.value = "";
-  composerInput.placeholder = "";
+  resetComposerHeight();
   sendBtn.textContent = "SEND";
   composerInput.focus();
 
@@ -448,7 +444,6 @@ function send(){
   const certified = !!(certifyToggle && certifyToggle.checked);
   const pdf = state.pendingPdf ? { ...state.pendingPdf } : null;
 
-  // Compose: create new thread
   if(state.mode === "compose"){
     const threadId = uid();
     const toTarget = state.activeToResolved || state.activeTo;
@@ -469,9 +464,7 @@ function send(){
     };
     save(LS_THREADS, threads);
 
-    // Simulate inbound routing:
-    // - If sender not in contacts => goes to Requests
-    // - If in contacts => goes to inbox
+    // demo routing
     const fromMe = myAddress;
     if(isKnownContact(fromMe)){
       const inbox = load(LS_INBOX, []);
@@ -492,6 +485,7 @@ function send(){
     );
 
     composerInput.value = "";
+    resetComposerHeight();
     state.pendingPdf = null;
     showAttachStatus(false);
     if(pdfInput) pdfInput.value = "";
@@ -500,7 +494,6 @@ function send(){
     return;
   }
 
-  // Thread reply
   if(state.mode === "thread"){
     const threads = load(LS_THREADS, {});
     const thread = threads[state.activeThreadId];
@@ -519,7 +512,6 @@ function send(){
     });
     save(LS_THREADS, threads);
 
-    // Simulate inbox item
     const inbox = load(LS_INBOX, []);
     inbox.unshift({ threadId: thread.threadId, from: myAddress, ts: Date.now(), certified });
     save(LS_INBOX, inbox);
@@ -532,6 +524,7 @@ function send(){
     );
 
     composerInput.value = "";
+    resetComposerHeight();
     state.pendingPdf = null;
     showAttachStatus(false);
     if(pdfInput) pdfInput.value = "";
@@ -556,18 +549,19 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// Enter key sends
+// ✅ Auto-expand + wrap + correct Enter behavior
 composerInput.addEventListener("input", () => {
-  composerInput.style.height = "auto";
-  composerInput.style.height = composerInput.scrollHeight + "px";
+  resetComposerHeight();
 });
 
 composerInput.addEventListener("keydown", (e) => {
-  if(e.key === "Enter"){
+  // Enter sends, Shift+Enter makes a newline
+  if(e.key === "Enter" && !e.shiftKey){
     e.preventDefault();
     send();
   }
 });
+
 sendBtn.onclick = send;
 
 // ---- Manual "TO:" input handler ----
@@ -602,6 +596,7 @@ async function handleToGo(){
 
   composerLabel.textContent = "SEND NEW MESSAGE";
   composerInput.value = "";
+  resetComposerHeight();
   sendBtn.textContent = "SEND";
   composerInput.focus();
 }
@@ -659,7 +654,6 @@ TIME: ${new Date().toISOString()}`;
 
     const sig = await signer.signMessage(msg);
 
-    // Local demo session: 12 hours
     save(LS_SESSION, {
       addr: myAddress,
       sig,
