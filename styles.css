@@ -18,6 +18,8 @@ html, body{
   background: var(--bg);
   color: var(--green);
   font-family: "VT323", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* ✅ page itself does NOT scroll; the center does */
   overflow:hidden;
 }
 
@@ -244,17 +246,37 @@ html, body{
 }
 .address:hover{ border-color: var(--green); }
 
-/* ----- Center ----- */
+/* ----- Center (SCROLLABLE) ----- */
 .center{
-  position:relative;
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+
   z-index:2;
-  height:100%;
+
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:flex-start;
-  padding-top:110px;
+
+  /* ✅ moved up (was 110px) */
+  padding-top:60px;
+
+  padding-left:24px;
+  padding-right:24px;
+
+  /* ✅ ensures composer isn't cut off on short screens */
+  padding-bottom:120px;
+
   gap:16px;
+  text-align:center;
+
+  /* ✅ center scrolls */
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 🔴 GLOBE — NO BOX, NO GLOW, SAME POSITION */
@@ -290,10 +312,11 @@ html, body{
   align-items:center;
 }
 
+/* ✅ IMPORTANT: keep file input bounded to the attach button */
 .toggle,
 .attach-btn{
-  position:relative;        /* critical: bounds the absolute input */
-  display:inline-flex;      /* prevents stretching */
+  position:relative;
+  display:inline-flex;
   align-items:center;
   justify-content:center;
   overflow:hidden;
@@ -307,12 +330,23 @@ html, body{
 
 .attach-btn input{
   position:absolute;
-  inset:0;                  /* covers only the attach button */
+  inset:0;
   opacity:0;
   cursor:pointer;
 }
 
-/* ----- Add-to buttons area (RESTORE STYLING) ----- */
+/* ----- Attachment status ----- */
+.attach-status{
+  margin-top:10px;
+  color: rgba(57,255,20,0.75);
+  border:1px dashed rgba(57,255,20,0.22);
+  padding:8px 10px;
+  border-radius:12px;
+  cursor:pointer;
+}
+.attach-status.hidden{ display:none !important; }
+
+/* ----- Add-to buttons area (RESTORED) ----- */
 .add-buttons{
   display:flex;
   flex-direction:column;
@@ -335,7 +369,6 @@ html, body{
   border-color: var(--green);
 }
 
-
 /* ----- Composer ----- */
 .composer{
   width:100%;
@@ -345,7 +378,10 @@ html, body{
 
 .composer-row{
   display:grid;
-  grid-template-columns: 180px 1fr 140px;
+
+  /* ✅ symmetric columns so the input is truly centered */
+  grid-template-columns: 180px minmax(0, 1fr) 180px;
+
   align-items:center;
   gap:12px;
   max-width:900px;
@@ -360,6 +396,7 @@ html, body{
 
 .line-wrap{
   position:relative;
+  width:100%;
 }
 
 .line{
@@ -384,6 +421,7 @@ html, body{
 }
 
 .send-btn{
+  justify-self:start; /* ✅ stays close to the message line */
   background:transparent;
   border:1px solid var(--green2);
   color:var(--green);
@@ -396,7 +434,13 @@ html, body{
 /* ----- Responsive ----- */
 @media (max-width:900px){
   .right-rail{ display:none; }
+
   .composer-row{
-    grid-template-columns: 140px 1fr 110px;
+    grid-template-columns: 140px minmax(0, 1fr) 140px; /* keep symmetry */
+  }
+
+  .center{
+    padding-top:50px;
+    padding-bottom:110px;
   }
 }
