@@ -1,3 +1,8 @@
+// ===========================
+// NOVAGRAM — app.js (FULL)
+// Modern background + modern wireframe globe
+// ===========================
+
 // ---- Mock data + state ----
 const ADDRESSES = ["neo.eth","trinity.eth","morpheus.eth","oracle.eth","smith.eth"];
 
@@ -743,9 +748,10 @@ renderSavedLists();
 renderInbox();
 openComposer("neo.eth");
 
+
 // ===========================
 // MODERN TECH BACKGROUND (CANVAS)
-// Subtle silver lines + occasional accent streaks
+// Stronger / more dynamic
 // ===========================
 (function modernBG(){
   const canvas = document.getElementById("bg");
@@ -755,7 +761,7 @@ openComposer("neo.eth");
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   let w = 0, h = 0;
 
-  const lines = [];
+  const segs = [];
   const streaks = [];
 
   function resize(){
@@ -767,29 +773,35 @@ openComposer("neo.eth");
     canvas.style.height = h + "px";
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-    lines.length = 0;
-    for(let i=0;i<80;i++) lines.push(makeLine());
+    segs.length = 0;
+    const count = Math.floor((w*h) / 45000);
+    for(let i=0;i<count;i++) segs.push(makeSeg());
   }
 
-  function makeLine(){
+  function makeSeg(){
+    const diagonal = Math.random() < 0.55;
+    const angle = diagonal ? (Math.random() < 0.5 ? -0.35 : 0.35) : 0;
+    const len = 90 + Math.random() * 320;
     return {
       x: Math.random() * w,
       y: Math.random() * h,
-      len: 80 + Math.random() * 260,
-      speed: 0.10 + Math.random() * 0.50,
-      alpha: 0.02 + Math.random() * 0.06,
-      phase: Math.random() * Math.PI * 2
+      len,
+      angle,
+      speed: 0.25 + Math.random() * 0.95,
+      alpha: 0.05 + Math.random() * 0.12,
+      phase: Math.random() * Math.PI * 2,
+      gap: 10 + Math.random() * 90
     };
   }
 
   function spawnStreak(){
     streaks.push({
-      x: -260,
+      x: -520,
       y: Math.random() * h,
-      vx: 8 + Math.random() * 14,
-      alpha: 0.10 + Math.random() * 0.12,
+      vx: 10 + Math.random() * 20,
+      alpha: 0.16 + Math.random() * 0.18,
       life: 0,
-      max: 32 + Math.random() * 45
+      max: 26 + Math.random() * 44
     });
   }
 
@@ -797,40 +809,47 @@ openComposer("neo.eth");
     ctx.clearRect(0,0,w,h);
 
     // vignette
-    const g = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.75);
+    const g = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.85);
     g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(0,0,0,0.65)");
+    g.addColorStop(1, "rgba(0,0,0,0.72)");
     ctx.fillStyle = g;
     ctx.fillRect(0,0,w,h);
 
-    // subtle grid points (tiny)
-    ctx.fillStyle = "rgba(235,238,245,0.02)";
-    for(let i=0;i<55;i++){
-      const x = (i*97 + (t*0.02)) % w;
-      const y = (i*71) % h;
+    // micro dust
+    ctx.fillStyle = "rgba(235,238,245,0.03)";
+    for(let i=0;i<80;i++){
+      const x = (i*131 + (t*0.03)) % w;
+      const y = (i*83) % h;
       ctx.fillRect(x, y, 1, 1);
     }
 
-    // drifting lines
+    // segments
     ctx.lineWidth = 1;
-    for(const L of lines){
-      L.x += L.speed;
-      if(L.x - L.len > w + 40){
-        Object.assign(L, makeLine(), { x: -40 });
+    for(const s of segs){
+      s.x += s.speed;
+      if(s.x - s.len > w + 120){
+        Object.assign(s, makeSeg(), { x: -120 });
       }
 
-      const pulse = (Math.sin(t*0.001 + L.phase) + 1) * 0.5; // 0..1
-      const a = L.alpha * (0.35 + 0.65 * pulse);
+      const pulse = (Math.sin(t*0.0012 + s.phase) + 1) * 0.5;
+      const a = s.alpha * (0.35 + 0.75 * pulse);
 
+      const x1 = s.x - s.len;
+      const y1 = s.y;
+      const x2 = s.x;
+      const y2 = s.y + s.angle * s.len;
+
+      ctx.setLineDash([s.gap, 22]);
       ctx.strokeStyle = `rgba(235,238,245,${a})`;
       ctx.beginPath();
-      ctx.moveTo(L.x - L.len, L.y);
-      ctx.lineTo(L.x, L.y);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
       ctx.stroke();
+      ctx.setLineDash([]);
     }
 
-    // occasional streak
-    if(Math.random() < 0.018) spawnStreak();
+    // accent streaks
+    if(Math.random() < 0.03) spawnStreak();
 
     for(let i = streaks.length - 1; i >= 0; i--){
       const S = streaks[i];
@@ -842,7 +861,7 @@ openComposer("neo.eth");
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(S.x, S.y);
-      ctx.lineTo(S.x + 320, S.y);
+      ctx.lineTo(S.x + 640, S.y);
       ctx.stroke();
 
       if(S.life >= S.max) streaks.splice(i, 1);
@@ -854,4 +873,148 @@ openComposer("neo.eth");
   window.addEventListener("resize", resize);
   resize();
   requestAnimationFrame(tick);
+})();
+
+
+// ===========================
+// MODERN WIREFRAME GLOBE (CANVAS)
+// Silver primary lines, subtle accent, soft glow
+// ===========================
+(function modernWireGlobe(){
+  const canvas = document.getElementById("globe");
+  if(!canvas) return;
+
+  const ctx = canvas.getContext("2d", { alpha: true });
+
+  function resize(){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const rect = canvas.getBoundingClientRect();
+    if(rect.width < 2 || rect.height < 2) return;
+
+    canvas.width  = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  function W(){ return canvas.getBoundingClientRect().width; }
+  function H(){ return canvas.getBoundingClientRect().height; }
+
+  const baseR = 0.38;
+  function R(){ return Math.max(60, Math.min(W(), H()) * baseR); }
+
+  function rotY(p, a){
+    const s = Math.sin(a), c = Math.cos(a);
+    return { x: p.x*c + p.z*s, y: p.y, z: -p.x*s + p.z*c };
+  }
+  function rotX(p, a){
+    const s = Math.sin(a), c = Math.cos(a);
+    return { x: p.x, y: p.y*c - p.z*s, z: p.y*s + p.z*c };
+  }
+  function project(p){
+    const depth = 420;
+    const scale = depth / (depth + p.z);
+    return { x: W()/2 + p.x * scale, y: H()/2 + p.y * scale };
+  }
+
+  function drawPath(points, strokeStyle, lineWidth){
+    ctx.beginPath();
+    for(let i=0;i<points.length;i++){
+      const p = project(points[i]);
+      if(i===0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+
+  let t = 0;
+  function frame(){
+    const w = W(), h = H();
+    if(w < 2 || h < 2){
+      requestAnimationFrame(frame);
+      return;
+    }
+
+    resize();
+
+    ctx.clearRect(0,0,w,h);
+
+    // soft glow
+    ctx.shadowColor = "rgba(125,255,205,0.10)";
+    ctx.shadowBlur = 22;
+
+    t += 0.010;
+    const ay = t;
+    const ax = -0.35;
+
+    const r = R();
+
+    const silver  = "rgba(235,238,245,0.26)";
+    const silver2 = "rgba(235,238,245,0.14)";
+    const accent  = "rgba(125,255,205,0.22)";
+
+    // latitude rings
+    for(let lat = -72; lat <= 72; lat += 12){
+      const pts = [];
+      const phi = (lat * Math.PI) / 180;
+      const y = Math.sin(phi) * r;
+      const rr = Math.cos(phi) * r;
+
+      for(let deg=0; deg<=360; deg+=6){
+        const th = (deg * Math.PI) / 180;
+        let p = { x: Math.cos(th)*rr, y, z: Math.sin(th)*rr };
+        p = rotY(p, ay);
+        p = rotX(p, ax);
+        pts.push(p);
+      }
+
+      const isEquator = Math.abs(lat) < 1;
+      drawPath(pts, isEquator ? accent : silver, 1);
+    }
+
+    // longitude arcs
+    for(let lon = 0; lon < 180; lon += 14){
+      const pts = [];
+      const th0 = (lon * Math.PI) / 180;
+
+      for(let deg=-90; deg<=90; deg+=5){
+        const phi = (deg * Math.PI) / 180;
+        let p = {
+          x: Math.cos(th0)*Math.cos(phi)*r,
+          y: Math.sin(phi)*r,
+          z: Math.sin(th0)*Math.cos(phi)*r
+        };
+        p = rotY(p, ay);
+        p = rotX(p, ax);
+        pts.push(p);
+      }
+
+      drawPath(pts, silver2, 1);
+    }
+
+    // silhouette
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, r, 0, Math.PI*2);
+    ctx.strokeStyle = "rgba(235,238,245,0.12)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // tiny node highlight
+    const node = rotX(rotY({x: 0, y: -r, z: 0}, ay), ax);
+    const pn = project(node);
+    ctx.shadowBlur = 26;
+    ctx.fillStyle = "rgba(125,255,205,0.60)";
+    ctx.beginPath();
+    ctx.arc(pn.x, pn.y, 2.2, 0, Math.PI*2);
+    ctx.fill();
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
 })();
