@@ -878,13 +878,28 @@ openComposer("neo.eth");
 
 // ===========================
 // MODERN WIREFRAME GLOBE (CANVAS)
-// Silver primary lines, subtle accent, soft glow
+// Tighter rim light + more intricate wireframe + sparkling activity nodes
 // ===========================
 (function modernWireGlobe(){
   const canvas = document.getElementById("globe");
   if(!canvas) return;
 
   const ctx = canvas.getContext("2d", { alpha: true });
+
+  // ---- TUNABLES ----
+  const TEAL = [125, 255, 205];           // teal-ish glow color
+  const RIM_INTENSITY = 0.55;             // overall rim brightness (0.25..0.8)
+  const RIM_TIGHTNESS = 0.22;             // smaller = tighter rim band (0.12..0.30)
+  const WIRE_ALPHA = 0.26;                // main wire opacity
+  const WIRE_ALPHA_SOFT = 0.14;           // secondary wire opacity
+  const NODE_COUNT = 26;                  // how many activity nodes
+  const NODE_BASE_SIZE = 1.6;             // px
+  const NODE_TWINKLE_SPEED = 0.9;         // 0.6..1.4
+  const NODE_BLOOM = 10;                  // glow blur for nodes (6..16)
+
+  function rgba(rgbArr, a){
+    return `rgba(${rgbArr[0]},${rgbArr[1]},${rgbArr[2]},${a})`;
+  }
 
   function resize(){
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -905,6 +920,7 @@ openComposer("neo.eth");
   const baseR = 0.38;
   function R(){ return Math.max(60, Math.min(W(), H()) * baseR); }
 
+  // ---- 3D helpers ----
   function rotY(p, a){
     const s = Math.sin(a), c = Math.cos(a);
     return { x: p.x*c + p.z*s, y: p.y, z: -p.x*s + p.z*c };
@@ -916,7 +932,7 @@ openComposer("neo.eth");
   function project(p){
     const depth = 420;
     const scale = depth / (depth + p.z);
-    return { x: W()/2 + p.x * scale, y: H()/2 + p.y * scale };
+    return { x: W()/2 + p.x * scale, y: H()/2 + p.y * scale, s: scale };
   }
 
   function drawPath(points, strokeStyle, lineWidth){
@@ -931,6 +947,132 @@ openComposer("neo.eth");
     ctx.stroke();
   }
 
+  // ---- Activity nodes (points on sphere) ----
+  // Create random spherical coords, keep stable across frames
+  const nodes = [];
+  function seedNodes(){
+    nodes.length = 0;
+    for(let i=0;i<NODE_COUNT;i++){
+      // latitude biased toward mid-lats (more visually pleasing)
+      const u = Math.random();
+      const lat = (Math.asin((u*2 - 1) * 0.78)); // compress poles a bit
+      const lon = Math.random() * Math.PI * 2;
+
+      nodes.push({
+        lat,
+        lon,
+        // twinkle parameters
+        phase: Math.random() * Math.PI * 2,
+        speed: (0.6 + Math.random() * 1.1) * NODE_TWINKLE_SPEED,
+        // occasional "spark" bursts
+        spark: 0,
+        sparkChance: 0.010 + Math.random() * 0.016
+      });
+    }
+  }
+  seedNodes();
+
+  // Draw nodes with realistic front/back fade
+  function drawNodes(r, ay, ax, time){
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.shadowColor = rgba(TEAL, 0.55);
+    ctx.shadowBlur = NODE_BLOOM;
+
+    for(const n of nodes){
+      // Convert spherical -> Cartesian on sphere surface
+      const x0 = Math.cos(n.lon) * Math.cos(n.lat) * r;
+      const y0 = Math.sin(n.lat) * r;
+      const z0 = Math.sin(n.lon) * Math.cos(n.lat) * r;
+
+      let p = { x: x0, y: y0, z: z0 };
+      p = rotY(p, ay);
+      p = rotX(p, ax);
+
+      // If node is on the far side, dim it heavily
+      // (z < 0 roughly means “away from camera” in this setup)
+      const front = Math.max(0, Math.min(1, (p.z + r) / (2*r))); // 0..1
+
+      // Twinkle: smooth pulse
+      const pulse = 0.45 + 0.55 * (0.5 + 0.5*Math.sin(time*n.speed + n.phase));
+
+      // Spark bursts: occasionally spike brightness then decay
+      if(Math.random() < n.sparkChance) n.spark = 1;
+      n.spark *= 0.92;
+
+      const sparkBoost = 1 + n.spark * 1.6;
+
+      const proj = project(p);
+      const size = (NODE_BASE_SIZE + 1.6 * pulse) * proj.s;
+      const alpha = 0.06 + 0.34 * front * pulse;     // keep subtle
+      const a2 = alpha * sparkBoost;
+
+      // tiny core
+      ctx.fillStyle = rgba(TEAL, Math.min(0.55, a2));
+      ctx.beginPath();
+      ctx.arc(proj.x, proj.y, size, 0, Math.PI*2);
+      ctx.fill();
+
+      // faint ring shimmer on spark
+      if(n.spark > 0.08){
+        ctx.strokeStyle = rgba(TEAL, Math.min(0.28, 0.18 * n.spark * front));
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, size*2.2, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // ---- Rim light (tight & subtle, glued to the edge) ----
+  function drawRim(r){
+    const w = W(), h = H();
+
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+
+    // Clip to globe so nothing drifts away from edge
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, r + 0.5, 0, Math.PI*2);
+    ctx.clip();
+
+    // The trick: use a radial gradient whose inner radius is close to the rim
+    // to create a thin band rather than a big foggy glow.
+    const cx = w/2 + r * 0.92;  // closer to rim (was 0.65 in your version)
+    const cy = h/2;
+
+    const inner = r * (1.0 - RIM_TIGHTNESS);  // tight band start
+    const outer = r * 1.10;                   // fade out slightly beyond rim
+
+    const grad = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+
+    // Much softer + lower alpha overall
+    grad.addColorStop(0.00, rgba(TEAL, 0.00));
+    grad.addColorStop(0.35, rgba(TEAL, 0.05 * RIM_INTENSITY));
+    grad.addColorStop(0.62, rgba(TEAL, 0.14 * RIM_INTENSITY));
+    grad.addColorStop(0.78, rgba(TEAL, 0.22 * RIM_INTENSITY));
+    grad.addColorStop(0.92, rgba(TEAL, 0.08 * RIM_INTENSITY));
+    grad.addColorStop(1.00, rgba(TEAL, 0.00));
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Crisp hot edge (thin arc). Lower brightness + closer to edge.
+    ctx.shadowColor = rgba(TEAL, 0.45 * RIM_INTENSITY);
+    ctx.shadowBlur  = 18 * RIM_INTENSITY;
+    ctx.strokeStyle = rgba(TEAL, 0.35 * RIM_INTENSITY);
+    ctx.lineWidth   = 1.3;
+
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, r + 0.15, -Math.PI/2, Math.PI/2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ---- Main animation ----
   let t = 0;
   function frame(){
     const w = W(), h = H();
@@ -940,48 +1082,45 @@ openComposer("neo.eth");
     }
 
     resize();
-
     ctx.clearRect(0,0,w,h);
 
-    // soft glow
-    ctx.shadowColor = "rgba(125,255,205,0.10)";
-    ctx.shadowBlur = 22;
-
     t += 0.010;
-    const ay = t;
-    const ax = -0.35;
+    const ay = t;        // rotate
+    const ax = -0.35;    // tilt
 
     const r = R();
 
-    const silver  = "rgba(235,238,245,0.26)";
-    const silver2 = "rgba(235,238,245,0.14)";
-    const accent  = "rgba(125,255,205,0.22)";
+    const silver  = `rgba(235,238,245,${WIRE_ALPHA})`;
+    const silver2 = `rgba(235,238,245,${WIRE_ALPHA_SOFT})`;
 
-    // latitude rings
-    for(let lat = -72; lat <= 72; lat += 12){
+    // Soft baseline glow for wires (very subtle)
+    ctx.shadowColor = rgba(TEAL, 0.08);
+    ctx.shadowBlur = 10;
+
+    // --- Wireframe: more intricate ---
+    // Latitudes (more frequent)
+    for(let lat = -78; lat <= 78; lat += 10){
       const pts = [];
       const phi = (lat * Math.PI) / 180;
       const y = Math.sin(phi) * r;
       const rr = Math.cos(phi) * r;
 
-      for(let deg=0; deg<=360; deg+=6){
+      for(let deg=0; deg<=360; deg+=5){
         const th = (deg * Math.PI) / 180;
         let p = { x: Math.cos(th)*rr, y, z: Math.sin(th)*rr };
         p = rotY(p, ay);
         p = rotX(p, ax);
         pts.push(p);
       }
-
-      const isEquator = Math.abs(lat) < 1;
-      drawPath(pts, isEquator ? accent : silver, 1);
+      drawPath(pts, silver, 1);
     }
 
-    // longitude arcs
-    for(let lon = 0; lon < 180; lon += 14){
+    // Longitudes
+    for(let lon = 0; lon < 180; lon += 12){
       const pts = [];
       const th0 = (lon * Math.PI) / 180;
 
-      for(let deg=-90; deg<=90; deg+=5){
+      for(let deg=-90; deg<=90; deg+=4){
         const phi = (deg * Math.PI) / 180;
         let p = {
           x: Math.cos(th0)*Math.cos(phi)*r,
@@ -992,74 +1131,41 @@ openComposer("neo.eth");
         p = rotX(p, ax);
         pts.push(p);
       }
-
       drawPath(pts, silver2, 1);
     }
 
-    // silhouette
-    ctx.shadowBlur = 12;
+    // Diagonal “weave” arcs for extra sci-fi intricacy
+    for(let k=0; k<10; k++){
+      const pts = [];
+      const lon0 = (k * 18) * Math.PI/180;
+      for(let deg=-90; deg<=90; deg+=5){
+        const phi = deg * Math.PI/180;
+        const twist = lon0 + phi*0.55; // diagonal slant
+        let p = {
+          x: Math.cos(twist)*Math.cos(phi)*r,
+          y: Math.sin(phi)*r,
+          z: Math.sin(twist)*Math.cos(phi)*r
+        };
+        p = rotY(p, ay);
+        p = rotX(p, ax);
+        pts.push(p);
+      }
+      drawPath(pts, `rgba(235,238,245,0.08)`, 1);
+    }
+
+    // Silhouette
+    ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.arc(w/2, h/2, r, 0, Math.PI*2);
     ctx.strokeStyle = "rgba(235,238,245,0.12)";
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // --- RIM LIGHT (right edge glow) ---
-ctx.save();
-    ctx.shadowBlur = 0;
-ctx.shadowColor = "rgba(0,0,0,0)";
+    // Rim light (tight and subtle)
+    drawRim(r);
 
-
-// Additive blending so it blooms
-ctx.globalCompositeOperation = "lighter";
-
-// Make a radial gradient whose center is slightly to the RIGHT of the sphere
-const rr = r;
-const grad = ctx.createRadialGradient(
-  w/2 + rr * 0.65, h/2, rr * 0.15,   // inner circle (right side)
-  w/2 + rr * 0.65, h/2, rr * 1.15    // outer circle
-);
-
-// Strong near the rim, fades quickly
-grad.addColorStop(0.00, "rgba(125,255,205,0.00)");
-grad.addColorStop(0.25, "rgba(125,255,205,0.06)");
-grad.addColorStop(0.52, "rgba(125,255,205,0.18)");
-grad.addColorStop(0.70, "rgba(125,255,205,0.55)");
-grad.addColorStop(0.86, "rgba(125,255,205,0.12)");
-grad.addColorStop(1.00, "rgba(125,255,205,0.00)");
-
-// Soft bloom
-ctx.shadowColor = "rgba(125,255,205,0.55)";
-ctx.shadowBlur = 40;
-
-// Paint only inside the globe area
-ctx.beginPath();
-ctx.arc(w/2, h/2, rr + 0.5, 0, Math.PI * 2);
-ctx.clip();
-
-// Fill the clipped globe with the rim gradient
-ctx.fillStyle = grad;
-ctx.fillRect(0, 0, w, h);
-
-// Add a crisp bright arc right on the rim (the “hot edge”)
-ctx.shadowBlur = 34;
-ctx.strokeStyle = "rgba(125,255,205,0.70)";
-ctx.lineWidth = 2.1;
-ctx.beginPath();
-ctx.arc(w/2, h/2, rr + 0.2, -Math.PI/2, Math.PI/2); // right hemisphere arc
-ctx.stroke();
-
-ctx.restore();
-
-
-    // tiny node highlight
-    const node = rotX(rotY({x: 0, y: -r, z: 0}, ay), ax);
-    const pn = project(node);
-    ctx.shadowBlur = 26;
-    ctx.fillStyle = "rgba(125,255,205,0.60)";
-    ctx.beginPath();
-    ctx.arc(pn.x, pn.y, 2.2, 0, Math.PI*2);
-    ctx.fill();
+    // Sparkling “activity” nodes (teal)
+    drawNodes(r, ay, ax, t);
 
     requestAnimationFrame(frame);
   }
