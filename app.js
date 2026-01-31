@@ -743,142 +743,115 @@ renderSavedLists();
 renderInbox();
 openComposer("neo.eth");
 
-// Optional: subtle scanlines background
-(function subtleBG(){
-  const c = document.getElementById("bg");
-  const ctx = c.getContext("2d");
-  function resize(){
-    c.width = window.innerWidth;
-    c.height = window.innerHeight;
-  }
-  window.addEventListener("resize", resize);
-  resize();
-
-  let t = 0;
-  function loop(){
-    t += 0.01;
-    ctx.clearRect(0,0,c.width,c.height);
-    for(let y=0; y<c.height; y+=6){
-      const a = 0.03 + 0.02*Math.sin(t + y*0.02);
-      ctx.fillStyle = `rgba(57,255,20,${a})`;
-      ctx.fillRect(0,y,c.width,1);
-    }
-    requestAnimationFrame(loop);
-  }
-  loop();
-})();
-
 // ===========================
-// RETRO WIREFRAME GLOBE (CANVAS)
+// MODERN TECH BACKGROUND (CANVAS)
+// Subtle silver lines + occasional accent streaks
 // ===========================
-(function wireGlobe(){
-  const canvas = document.getElementById("globe");
+(function modernBG(){
+  const canvas = document.getElementById("bg");
   if(!canvas) return;
+  const ctx = canvas.getContext("2d", { alpha: true });
 
-  const ctx = canvas.getContext("2d");
+  const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  let w = 0, h = 0;
+
+  const lines = [];
+  const streaks = [];
 
   function resize(){
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width  = Math.floor(rect.width * dpr);
-    canvas.height = Math.floor(rect.height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  window.addEventListener("resize", resize);
-  resize();
+    w = Math.floor(window.innerWidth);
+    h = Math.floor(window.innerHeight);
+    canvas.width = Math.floor(w * DPR);
+    canvas.height = Math.floor(h * DPR);
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  const R = 95;
-  const cx = () => canvas.getBoundingClientRect().width / 2;
-  const cy = () => canvas.getBoundingClientRect().height / 2;
-
-  function rotY(p, a){
-    const s = Math.sin(a), c = Math.cos(a);
-    return { x: p.x*c + p.z*s, y: p.y, z: -p.x*s + p.z*c };
-  }
-  function rotX(p, a){
-    const s = Math.sin(a), c = Math.cos(a);
-    return { x: p.x, y: p.y*c - p.z*s, z: p.y*s + p.z*c };
-  }
-  function project(p){
-    const depth = 260;
-    const scale = depth / (depth + p.z);
-    return { x: cx() + p.x * scale, y: cy() + p.y * scale };
-  }
-  function drawPath(points, color){
-    ctx.beginPath();
-    for(let i=0;i<points.length;i++){
-      const p = project(points[i]);
-      if(i===0) ctx.moveTo(p.x, p.y);
-      else ctx.lineTo(p.x, p.y);
-    }
-    ctx.strokeStyle = color;
-    ctx.stroke();
+    lines.length = 0;
+    for(let i=0;i<80;i++) lines.push(makeLine());
   }
 
-  let t = 0;
-  function frame(){
-    const w = canvas.getBoundingClientRect().width;
-    const h = canvas.getBoundingClientRect().height;
+  function makeLine(){
+    return {
+      x: Math.random() * w,
+      y: Math.random() * h,
+      len: 80 + Math.random() * 260,
+      speed: 0.10 + Math.random() * 0.50,
+      alpha: 0.02 + Math.random() * 0.06,
+      phase: Math.random() * Math.PI * 2
+    };
+  }
+
+  function spawnStreak(){
+    streaks.push({
+      x: -260,
+      y: Math.random() * h,
+      vx: 8 + Math.random() * 14,
+      alpha: 0.10 + Math.random() * 0.12,
+      life: 0,
+      max: 32 + Math.random() * 45
+    });
+  }
+
+  function tick(t){
     ctx.clearRect(0,0,w,h);
 
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    // vignette
+    const g = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.75);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.65)");
+    ctx.fillStyle = g;
     ctx.fillRect(0,0,w,h);
 
-    t += 0.012;
-    const ay = t;
-    const ax = -0.35;
-
-    const cGreen = "rgba(57,255,20,0.75)";
-    const cBlue  = "rgba(80,160,255,0.55)";
-    const cRed   = "rgba(255,80,120,0.45)";
-    const cDim   = "rgba(57,255,20,0.18)";
-
-    for(let lat = -60; lat <= 60; lat += 20){
-      const pts = [];
-      const phi = (lat * Math.PI) / 180;
-      const y = Math.sin(phi) * R;
-      const r = Math.cos(phi) * R;
-
-      for(let deg=0; deg<=360; deg+=8){
-        const th = (deg * Math.PI) / 180;
-        let p = { x: Math.cos(th)*r, y, z: Math.sin(th)*r };
-        p = rotY(p, ay);
-        p = rotX(p, ax);
-        pts.push(p);
-      }
-
-      const bandColor = (lat === 0) ? cGreen : (lat === 20 || lat === -20) ? cBlue : cRed;
-      ctx.lineWidth = 1;
-      drawPath(pts, bandColor);
+    // subtle grid points (tiny)
+    ctx.fillStyle = "rgba(235,238,245,0.02)";
+    for(let i=0;i<55;i++){
+      const x = (i*97 + (t*0.02)) % w;
+      const y = (i*71) % h;
+      ctx.fillRect(x, y, 1, 1);
     }
 
-    for(let lon = 0; lon < 180; lon += 20){
-      const pts = [];
-      const th0 = (lon * Math.PI) / 180;
-
-      for(let deg=-90; deg<=90; deg+=6){
-        const phi = (deg * Math.PI) / 180;
-        let p = {
-          x: Math.cos(th0)*Math.cos(phi)*R,
-          y: Math.sin(phi)*R,
-          z: Math.sin(th0)*Math.cos(phi)*R
-        };
-        p = rotY(p, ay);
-        p = rotX(p, ax);
-        pts.push(p);
-      }
-
-      ctx.lineWidth = 1;
-      drawPath(pts, cDim);
-    }
-
-    ctx.beginPath();
-    ctx.arc(w/2, h/2, R, 0, Math.PI*2);
-    ctx.strokeStyle = "rgba(57,255,20,0.20)";
+    // drifting lines
     ctx.lineWidth = 1;
-    ctx.stroke();
+    for(const L of lines){
+      L.x += L.speed;
+      if(L.x - L.len > w + 40){
+        Object.assign(L, makeLine(), { x: -40 });
+      }
 
-    requestAnimationFrame(frame);
+      const pulse = (Math.sin(t*0.001 + L.phase) + 1) * 0.5; // 0..1
+      const a = L.alpha * (0.35 + 0.65 * pulse);
+
+      ctx.strokeStyle = `rgba(235,238,245,${a})`;
+      ctx.beginPath();
+      ctx.moveTo(L.x - L.len, L.y);
+      ctx.lineTo(L.x, L.y);
+      ctx.stroke();
+    }
+
+    // occasional streak
+    if(Math.random() < 0.018) spawnStreak();
+
+    for(let i = streaks.length - 1; i >= 0; i--){
+      const S = streaks[i];
+      S.x += S.vx;
+      S.life += 1;
+
+      const fade = 1 - (S.life / S.max);
+      ctx.strokeStyle = `rgba(125,255,205,${S.alpha * fade})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(S.x, S.y);
+      ctx.lineTo(S.x + 320, S.y);
+      ctx.stroke();
+
+      if(S.life >= S.max) streaks.splice(i, 1);
+    }
+
+    requestAnimationFrame(tick);
   }
-  requestAnimationFrame(frame);
+
+  window.addEventListener("resize", resize);
+  resize();
+  requestAnimationFrame(tick);
 })();
