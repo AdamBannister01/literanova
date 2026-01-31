@@ -1004,6 +1004,51 @@ openComposer("neo.eth");
     ctx.lineWidth = 1;
     ctx.stroke();
 
+    // --- RIM LIGHT (right edge glow) ---
+ctx.save();
+
+// Additive blending so it blooms
+ctx.globalCompositeOperation = "lighter";
+
+// Make a radial gradient whose center is slightly to the RIGHT of the sphere
+const rr = r;
+const grad = ctx.createRadialGradient(
+  w/2 + rr * 0.65, h/2, rr * 0.15,   // inner circle (right side)
+  w/2 + rr * 0.65, h/2, rr * 1.15    // outer circle
+);
+
+// Strong near the rim, fades quickly
+grad.addColorStop(0.00, "rgba(125,255,205,0.00)");
+grad.addColorStop(0.25, "rgba(125,255,205,0.06)");
+grad.addColorStop(0.52, "rgba(125,255,205,0.18)");
+grad.addColorStop(0.70, "rgba(125,255,205,0.35)");
+grad.addColorStop(0.86, "rgba(125,255,205,0.12)");
+grad.addColorStop(1.00, "rgba(125,255,205,0.00)");
+
+// Soft bloom
+ctx.shadowColor = "rgba(125,255,205,0.55)";
+ctx.shadowBlur = 28;
+
+// Paint only inside the globe area
+ctx.beginPath();
+ctx.arc(w/2, h/2, rr + 0.5, 0, Math.PI * 2);
+ctx.clip();
+
+// Fill the clipped globe with the rim gradient
+ctx.fillStyle = grad;
+ctx.fillRect(0, 0, w, h);
+
+// Add a crisp bright arc right on the rim (the “hot edge”)
+ctx.shadowBlur = 34;
+ctx.strokeStyle = "rgba(125,255,205,0.55)";
+ctx.lineWidth = 1.6;
+ctx.beginPath();
+ctx.arc(w/2, h/2, rr + 0.2, -Math.PI/2, Math.PI/2); // right hemisphere arc
+ctx.stroke();
+
+ctx.restore();
+
+
     // tiny node highlight
     const node = rotX(rotY({x: 0, y: -r, z: 0}, ay), ax);
     const pn = project(node);
