@@ -1026,17 +1026,61 @@ openComposer("neo.eth");
     ctx.restore();
   }
 
-  // ---- Rim light (tight & subtle, glued to the edge) ----
+  // ---- Rim light (tighter & glued to the edge) ----
   function drawRim(r){
     const w = W(), h = H();
+    const cx = w/2, cy = h/2;
 
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
 
-    // Clip to globe so nothing drifts away from edge
+    // Clip to globe so nothing can drift outside the sphere
     ctx.beginPath();
-    ctx.arc(w/2, h/2, r + 0.5, 0, Math.PI*2);
+    ctx.arc(cx, cy, r + 0.5, 0, Math.PI * 2);
     ctx.clip();
+
+    // 1) THIN RIM BAND:
+    // Create a radial gradient centered exactly on the sphere center,
+    // so the bright part lands exactly at radius = r.
+    const band = Math.max(10, r * 0.07); // band thickness in px (thin)
+    const grad = ctx.createRadialGradient(cx, cy, r - band, cx, cy, r + band);
+
+    // Concentrate energy right at the rim
+    grad.addColorStop(0.00, "rgba(125,255,205,0.00)");
+    grad.addColorStop(0.55, `rgba(125,255,205,${0.06 * RIM_INTENSITY})`);
+    grad.addColorStop(0.72, `rgba(125,255,205,${0.18 * RIM_INTENSITY})`);
+    grad.addColorStop(0.86, `rgba(125,255,205,${0.30 * RIM_INTENSITY})`);
+    grad.addColorStop(1.00, "rgba(125,255,205,0.00)");
+
+    // Fill clipped area with the rim band
+    ctx.shadowColor = `rgba(125,255,205,${0.30 * RIM_INTENSITY})`;
+    ctx.shadowBlur  = 14 * RIM_INTENSITY;
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 2) RIGHT-SIDE "HOT EDGE" ARC:
+    // This is what makes it feel like your reference.
+    ctx.shadowBlur  = 18 * RIM_INTENSITY;
+    ctx.strokeStyle = `rgba(125,255,205,${0.42 * RIM_INTENSITY})`;
+    ctx.lineWidth   = 1.4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 0.15, -Math.PI/2, Math.PI/2);
+    ctx.stroke();
+
+    // 3) VERY SUBTLE RIGHT-SIDE FALLOFF (optional but helps):
+    // A tiny extra gradient only on the right hemisphere, kept super tight.
+    ctx.shadowBlur = 0;
+    const gx = cx + r * 0.98; // move to *almost exactly* on the rim
+    const g2 = ctx.createRadialGradient(gx, cy, r * 0.02, gx, cy, r * 0.22);
+    g2.addColorStop(0.00, `rgba(125,255,205,${0.16 * RIM_INTENSITY})`);
+    g2.addColorStop(1.00, "rgba(125,255,205,0.00)");
+
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.restore();
+  }
+
 
     // The trick: use a radial gradient whose inner radius is close to the rim
     // to create a thin band rather than a big foggy glow.
