@@ -1,6 +1,6 @@
 // ===========================
 // NOVAGRAM — app.js (FULL)
-// Modern background + modern wireframe globe
+// Modern background + modern wireframe globe (fixed)
 // ===========================
 
 // ---- Mock data + state ----
@@ -137,7 +137,7 @@ function showAttachStatus(show, msg=""){
   attachStatus.textContent = msg;
 }
 function setCenter(msg){
-  centerText.textContent = msg;
+  if(centerText) centerText.textContent = msg;
 }
 function escapeHtml(s){
   return String(s)
@@ -217,6 +217,7 @@ async function normalizeRecipient(input){
 
 // ---- Render right-rail addresses ----
 function renderAddresses(){
+  if(!addressList) return;
   addressList.innerHTML = "";
   ADDRESSES.forEach(addr => {
     const el = document.createElement("div");
@@ -247,6 +248,8 @@ function setUnlockedUI(){
 
 function renderInbox(){
   setUnlockedUI();
+
+  if(!inboxItems) return;
 
   if(!state.inboxUnlocked){
     if(requestItems) requestItems.innerHTML = `<div class="inbox-item"><div class="title">LOCKED</div></div>`;
@@ -356,7 +359,6 @@ async function openComposer(toAddress){
   state.activeThreadId = null;
   state.pendingPdf = null;
   showAttachStatus(false);
-
   showAddButtons(false);
 
   setCenter(
@@ -383,11 +385,13 @@ async function openComposer(toAddress){
 
   showAddButtons(!!resolved && isAddr(resolved));
 
-  composerLabel.textContent = "SEND NEW MESSAGE";
-  composerInput.value = "";
-  resetComposerHeight();
-  sendBtn.textContent = "SEND";
-  composerInput.focus();
+  if(composerLabel) composerLabel.textContent = "SEND NEW MESSAGE";
+  if(composerInput){
+    composerInput.value = "";
+    resetComposerHeight();
+    composerInput.focus();
+  }
+  if(sendBtn) sendBtn.textContent = "SEND";
 }
 
 function openThread(threadId){
@@ -421,23 +425,27 @@ function openThread(threadId){
     lines.push(`[PDF ATTACHED] ${last.pdf.name}`);
     lines.push(`(OPEN: click the attachment status below)`);
     showAttachStatus(true, `OPEN PDF: ${last.pdf.name}`);
-    attachStatus.onclick = () => window.open(last.pdf.dataUrl, "_blank");
+    if(attachStatus) attachStatus.onclick = () => window.open(last.pdf.dataUrl, "_blank");
   } else {
-    attachStatus.onclick = null;
+    if(attachStatus) attachStatus.onclick = null;
   }
 
   setCenter(lines.join("\n"));
 
-  composerLabel.textContent = "REPLY TO MESSAGE";
-  composerInput.value = "";
-  resetComposerHeight();
-  sendBtn.textContent = "SEND";
-  composerInput.focus();
+  if(composerLabel) composerLabel.textContent = "REPLY TO MESSAGE";
+  if(composerInput){
+    composerInput.value = "";
+    resetComposerHeight();
+    composerInput.focus();
+  }
+  if(sendBtn) sendBtn.textContent = "SEND";
 
   renderInbox();
 }
 
 function send(){
+  if(!composerInput) return;
+
   const body = composerInput.value.trim();
   if(!body) return;
 
@@ -539,39 +547,40 @@ function send(){
 }
 
 // ---- Inbox dropdown toggle ----
-inboxBtn.onclick = () => {
-  state.inboxOpen = !state.inboxOpen;
-  inboxMenu.classList.toggle("hidden", !state.inboxOpen);
-  renderInbox();
-};
+if(inboxBtn && inboxMenu){
+  inboxBtn.onclick = () => {
+    state.inboxOpen = !state.inboxOpen;
+    inboxMenu.classList.toggle("hidden", !state.inboxOpen);
+    renderInbox();
+  };
 
-// Close dropdown if click elsewhere
-document.addEventListener("click", (e) => {
-  const clickedInside = e.target.closest(".inbox");
-  if(!clickedInside && state.inboxOpen){
-    state.inboxOpen = false;
-    inboxMenu.classList.add("hidden");
-  }
-});
+  // Close dropdown if click elsewhere
+  document.addEventListener("click", (e) => {
+    const clickedInside = e.target.closest(".inbox");
+    if(!clickedInside && state.inboxOpen){
+      state.inboxOpen = false;
+      inboxMenu.classList.add("hidden");
+    }
+  });
+}
 
 // ✅ Auto-expand + wrap + correct Enter behavior
-composerInput.addEventListener("input", () => {
-  resetComposerHeight();
-});
+if(composerInput){
+  composerInput.addEventListener("input", resetComposerHeight);
 
-composerInput.addEventListener("keydown", (e) => {
-  // Enter sends, Shift+Enter makes a newline
-  if(e.key === "Enter" && !e.shiftKey){
-    e.preventDefault();
-    send();
-  }
-});
-
-sendBtn.onclick = send;
+  composerInput.addEventListener("keydown", (e) => {
+    // Enter sends, Shift+Enter makes a newline
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      send();
+    }
+  });
+}
+if(sendBtn) sendBtn.onclick = send;
 
 // ---- Manual "TO:" input handler ----
 async function handleToGo(){
-  const result = await normalizeRecipient(toInput.value);
+  const result = await normalizeRecipient(toInput?.value);
 
   if(!result.ok){
     const msg = {
@@ -599,11 +608,13 @@ async function handleToGo(){
 
   showAddButtons(!!result.address && isAddr(result.address));
 
-  composerLabel.textContent = "SEND NEW MESSAGE";
-  composerInput.value = "";
-  resetComposerHeight();
-  sendBtn.textContent = "SEND";
-  composerInput.focus();
+  if(composerLabel) composerLabel.textContent = "SEND NEW MESSAGE";
+  if(composerInput){
+    composerInput.value = "";
+    resetComposerHeight();
+    composerInput.focus();
+  }
+  if(sendBtn) sendBtn.textContent = "SEND";
 }
 
 if(toGoBtn && toInput){
@@ -672,10 +683,7 @@ TIME: ${new Date().toISOString()}`;
     setCenter("SIGNATURE CANCELLED.");
   }
 }
-
-if(unlockBtn){
-  unlockBtn.onclick = unlockInbox;
-}
+if(unlockBtn) unlockBtn.onclick = unlockInbox;
 
 // ---- PDF attachment ----
 async function fileToDataUrl(file){
@@ -711,7 +719,7 @@ if(pdfInput){
     const dataUrl = await fileToDataUrl(file);
     state.pendingPdf = { name: file.name, size: file.size, mime: file.type, dataUrl };
     showAttachStatus(true, `ATTACHED: ${file.name}`);
-    attachStatus.onclick = () => window.open(dataUrl, "_blank");
+    if(attachStatus) attachStatus.onclick = () => window.open(dataUrl, "_blank");
   });
 }
 
@@ -725,11 +733,11 @@ async function connectWallet(){
   try{
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
     myAddress = accounts[0];
-    walletStatus.textContent = myAddress;
+    if(walletStatus) walletStatus.textContent = myAddress;
 
     window.ethereum.on("accountsChanged", (accs) => {
       myAddress = accs?.[0] || null;
-      walletStatus.textContent = myAddress || "NOT CONNECTED";
+      if(walletStatus) walletStatus.textContent = myAddress || "NOT CONNECTED";
       renderInbox();
     });
 
@@ -739,7 +747,7 @@ async function connectWallet(){
     setCenter("WALLET CONNECTION CANCELLED.");
   }
 }
-connectBtn.onclick = connectWallet;
+if(connectBtn) connectBtn.onclick = connectWallet;
 
 // ---- Init ----
 showAddButtons(false);
@@ -878,7 +886,7 @@ openComposer("neo.eth");
 
 // ===========================
 // MODERN WIREFRAME GLOBE (CANVAS)
-// Tighter rim light + more intricate wireframe + sparkling activity nodes
+// Tighter rim light + intricate wireframe + sparkling activity nodes
 // ===========================
 (function modernWireGlobe(){
   const canvas = document.getElementById("globe");
@@ -887,15 +895,15 @@ openComposer("neo.eth");
   const ctx = canvas.getContext("2d", { alpha: true });
 
   // ---- TUNABLES ----
-  const TEAL = [125, 255, 205];           // teal-ish glow color
-  const RIM_INTENSITY = 0.55;             // overall rim brightness (0.25..0.8)
-  const RIM_TIGHTNESS = 0.22;             // smaller = tighter rim band (0.12..0.30)
-  const WIRE_ALPHA = 0.26;                // main wire opacity
-  const WIRE_ALPHA_SOFT = 0.14;           // secondary wire opacity
-  const NODE_COUNT = 26;                  // how many activity nodes
-  const NODE_BASE_SIZE = 1.6;             // px
-  const NODE_TWINKLE_SPEED = 0.9;         // 0.6..1.4
-  const NODE_BLOOM = 10;                  // glow blur for nodes (6..16)
+  const TEAL = [125, 255, 205];
+  const RIM_INTENSITY = 0.55;
+  const WIRE_ALPHA = 0.26;
+  const WIRE_ALPHA_SOFT = 0.14;
+
+  const NODE_COUNT = 26;
+  const NODE_BASE_SIZE = 1.6;
+  const NODE_TWINKLE_SPEED = 0.9;
+  const NODE_BLOOM = 10;
 
   function rgba(rgbArr, a){
     return `rgba(${rgbArr[0]},${rgbArr[1]},${rgbArr[2]},${a})`;
@@ -947,24 +955,20 @@ openComposer("neo.eth");
     ctx.stroke();
   }
 
-  // ---- Activity nodes (points on sphere) ----
-  // Create random spherical coords, keep stable across frames
+  // ---- Activity nodes ----
   const nodes = [];
   function seedNodes(){
     nodes.length = 0;
     for(let i=0;i<NODE_COUNT;i++){
-      // latitude biased toward mid-lats (more visually pleasing)
       const u = Math.random();
-      const lat = (Math.asin((u*2 - 1) * 0.78)); // compress poles a bit
+      const lat = (Math.asin((u*2 - 1) * 0.78));
       const lon = Math.random() * Math.PI * 2;
 
       nodes.push({
         lat,
         lon,
-        // twinkle parameters
         phase: Math.random() * Math.PI * 2,
         speed: (0.6 + Math.random() * 1.1) * NODE_TWINKLE_SPEED,
-        // occasional "spark" bursts
         spark: 0,
         sparkChance: 0.010 + Math.random() * 0.016
       });
@@ -972,7 +976,6 @@ openComposer("neo.eth");
   }
   seedNodes();
 
-  // Draw nodes with realistic front/back fade
   function drawNodes(r, ay, ax, time){
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
@@ -980,7 +983,6 @@ openComposer("neo.eth");
     ctx.shadowBlur = NODE_BLOOM;
 
     for(const n of nodes){
-      // Convert spherical -> Cartesian on sphere surface
       const x0 = Math.cos(n.lon) * Math.cos(n.lat) * r;
       const y0 = Math.sin(n.lat) * r;
       const z0 = Math.sin(n.lon) * Math.cos(n.lat) * r;
@@ -989,14 +991,9 @@ openComposer("neo.eth");
       p = rotY(p, ay);
       p = rotX(p, ax);
 
-      // If node is on the far side, dim it heavily
-      // (z < 0 roughly means “away from camera” in this setup)
-      const front = Math.max(0, Math.min(1, (p.z + r) / (2*r))); // 0..1
-
-      // Twinkle: smooth pulse
+      const front = Math.max(0, Math.min(1, (p.z + r) / (2*r)));
       const pulse = 0.45 + 0.55 * (0.5 + 0.5*Math.sin(time*n.speed + n.phase));
 
-      // Spark bursts: occasionally spike brightness then decay
       if(Math.random() < n.sparkChance) n.spark = 1;
       n.spark *= 0.92;
 
@@ -1004,16 +1001,14 @@ openComposer("neo.eth");
 
       const proj = project(p);
       const size = (NODE_BASE_SIZE + 1.6 * pulse) * proj.s;
-      const alpha = 0.06 + 0.34 * front * pulse;     // keep subtle
-      const a2 = alpha * sparkBoost;
+      const alpha = 0.06 + 0.34 * front * pulse;
+      const a2 = Math.min(0.55, alpha * sparkBoost);
 
-      // tiny core
-      ctx.fillStyle = rgba(TEAL, Math.min(0.55, a2));
+      ctx.fillStyle = rgba(TEAL, a2);
       ctx.beginPath();
       ctx.arc(proj.x, proj.y, size, 0, Math.PI*2);
       ctx.fill();
 
-      // faint ring shimmer on spark
       if(n.spark > 0.08){
         ctx.strokeStyle = rgba(TEAL, Math.min(0.28, 0.18 * n.spark * front));
         ctx.lineWidth = 1;
@@ -1026,7 +1021,7 @@ openComposer("neo.eth");
     ctx.restore();
   }
 
-  // ---- Rim light (tighter & glued to the edge) ----
+  // ---- Rim light (hugging edge; cannot drift) ----
   function drawRim(r){
     const w = W(), h = H();
     const cx = w/2, cy = h/2;
@@ -1034,83 +1029,32 @@ openComposer("neo.eth");
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
 
-    // Clip to globe so nothing can drift outside the sphere
+    // Clip to globe so nothing goes outside
     ctx.beginPath();
     ctx.arc(cx, cy, r + 0.5, 0, Math.PI * 2);
     ctx.clip();
 
-    // 1) THIN RIM BAND:
-    // Create a radial gradient centered exactly on the sphere center,
-    // so the bright part lands exactly at radius = r.
-    const band = Math.max(10, r * 0.07); // band thickness in px (thin)
+    // Tight band centered on sphere radius
+    const band = Math.max(8, r * 0.045);
     const grad = ctx.createRadialGradient(cx, cy, r - band, cx, cy, r + band);
 
-    // Concentrate energy right at the rim
     grad.addColorStop(0.00, "rgba(125,255,205,0.00)");
-    grad.addColorStop(0.55, `rgba(125,255,205,${0.06 * RIM_INTENSITY})`);
-    grad.addColorStop(0.72, `rgba(125,255,205,${0.18 * RIM_INTENSITY})`);
-    grad.addColorStop(0.86, `rgba(125,255,205,${0.30 * RIM_INTENSITY})`);
+    grad.addColorStop(0.62, `rgba(125,255,205,${0.06 * RIM_INTENSITY})`);
+    grad.addColorStop(0.78, `rgba(125,255,205,${0.16 * RIM_INTENSITY})`);
+    grad.addColorStop(0.90, `rgba(125,255,205,${0.22 * RIM_INTENSITY})`);
     grad.addColorStop(1.00, "rgba(125,255,205,0.00)");
 
-    // Fill clipped area with the rim band
-    ctx.shadowColor = `rgba(125,255,205,${0.30 * RIM_INTENSITY})`;
-    ctx.shadowBlur  = 14 * RIM_INTENSITY;
+    ctx.shadowColor = `rgba(125,255,205,${0.22 * RIM_INTENSITY})`;
+    ctx.shadowBlur  = 10 * RIM_INTENSITY;
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // 2) RIGHT-SIDE "HOT EDGE" ARC:
-    // This is what makes it feel like your reference.
-    ctx.shadowBlur  = 18 * RIM_INTENSITY;
-    ctx.strokeStyle = `rgba(125,255,205,${0.42 * RIM_INTENSITY})`;
-    ctx.lineWidth   = 1.4;
+    // Hot right rim arc (thin)
+    ctx.shadowBlur  = 12 * RIM_INTENSITY;
+    ctx.strokeStyle = `rgba(125,255,205,${0.32 * RIM_INTENSITY})`;
+    ctx.lineWidth   = 1.25;
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 0.15, -Math.PI/2, Math.PI/2);
-    ctx.stroke();
-
-    // 3) VERY SUBTLE RIGHT-SIDE FALLOFF (optional but helps):
-    // A tiny extra gradient only on the right hemisphere, kept super tight.
-    ctx.shadowBlur = 0;
-    const gx = cx + r * 0.98; // move to *almost exactly* on the rim
-    const g2 = ctx.createRadialGradient(gx, cy, r * 0.02, gx, cy, r * 0.22);
-    g2.addColorStop(0.00, `rgba(125,255,205,${0.16 * RIM_INTENSITY})`);
-    g2.addColorStop(1.00, "rgba(125,255,205,0.00)");
-
-    ctx.fillStyle = g2;
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.restore();
-  }
-
-
-    // The trick: use a radial gradient whose inner radius is close to the rim
-    // to create a thin band rather than a big foggy glow.
-    const cx = w/2 + r * 0.92;  // closer to rim (was 0.65 in your version)
-    const cy = h/2;
-
-    const inner = r * (1.0 - RIM_TIGHTNESS);  // tight band start
-    const outer = r * 1.10;                   // fade out slightly beyond rim
-
-    const grad = ctx.createRadialGradient(cx, cy, inner, cx, cy, outer);
-
-    // Much softer + lower alpha overall
-    grad.addColorStop(0.00, rgba(TEAL, 0.00));
-    grad.addColorStop(0.35, rgba(TEAL, 0.05 * RIM_INTENSITY));
-    grad.addColorStop(0.62, rgba(TEAL, 0.14 * RIM_INTENSITY));
-    grad.addColorStop(0.78, rgba(TEAL, 0.22 * RIM_INTENSITY));
-    grad.addColorStop(0.92, rgba(TEAL, 0.08 * RIM_INTENSITY));
-    grad.addColorStop(1.00, rgba(TEAL, 0.00));
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    // Crisp hot edge (thin arc). Lower brightness + closer to edge.
-    ctx.shadowColor = rgba(TEAL, 0.45 * RIM_INTENSITY);
-    ctx.shadowBlur  = 18 * RIM_INTENSITY;
-    ctx.strokeStyle = rgba(TEAL, 0.35 * RIM_INTENSITY);
-    ctx.lineWidth   = 1.3;
-
-    ctx.beginPath();
-    ctx.arc(w/2, h/2, r + 0.15, -Math.PI/2, Math.PI/2);
+    ctx.arc(cx, cy, r + 0.2, -Math.PI/2, Math.PI/2);
     ctx.stroke();
 
     ctx.restore();
@@ -1129,20 +1073,18 @@ openComposer("neo.eth");
     ctx.clearRect(0,0,w,h);
 
     t += 0.010;
-    const ay = t;        // rotate
-    const ax = -0.35;    // tilt
+    const ay = t;
+    const ax = -0.35;
 
     const r = R();
 
     const silver  = `rgba(235,238,245,${WIRE_ALPHA})`;
     const silver2 = `rgba(235,238,245,${WIRE_ALPHA_SOFT})`;
 
-    // Soft baseline glow for wires (very subtle)
-    ctx.shadowColor = rgba(TEAL, 0.08);
-    ctx.shadowBlur = 10;
+    ctx.shadowColor = rgba(TEAL, 0.06);
+    ctx.shadowBlur = 8;
 
-    // --- Wireframe: more intricate ---
-    // Latitudes (more frequent)
+    // Latitudes
     for(let lat = -78; lat <= 78; lat += 10){
       const pts = [];
       const phi = (lat * Math.PI) / 180;
@@ -1178,13 +1120,13 @@ openComposer("neo.eth");
       drawPath(pts, silver2, 1);
     }
 
-    // Diagonal “weave” arcs for extra sci-fi intricacy
+    // Diagonal weave for extra intricacy
     for(let k=0; k<10; k++){
       const pts = [];
       const lon0 = (k * 18) * Math.PI/180;
       for(let deg=-90; deg<=90; deg+=5){
         const phi = deg * Math.PI/180;
-        const twist = lon0 + phi*0.55; // diagonal slant
+        const twist = lon0 + phi*0.55;
         let p = {
           x: Math.cos(twist)*Math.cos(phi)*r,
           y: Math.sin(phi)*r,
@@ -1194,7 +1136,7 @@ openComposer("neo.eth");
         p = rotX(p, ax);
         pts.push(p);
       }
-      drawPath(pts, `rgba(235,238,245,0.08)`, 1);
+      drawPath(pts, "rgba(235,238,245,0.08)", 1);
     }
 
     // Silhouette
@@ -1205,10 +1147,8 @@ openComposer("neo.eth");
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Rim light (tight and subtle)
+    // Rim + nodes
     drawRim(r);
-
-    // Sparkling “activity” nodes (teal)
     drawNodes(r, ay, ax, t);
 
     requestAnimationFrame(frame);
